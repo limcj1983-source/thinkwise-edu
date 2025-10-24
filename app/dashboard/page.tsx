@@ -174,7 +174,7 @@ export default function DashboardPage() {
               {/* 무료 사용자 제한 알림 */}
               {user.subscription === "FREE" &&
                 stats?.remainingProblems !== null &&
-                stats.remainingProblems === 0 && (
+                stats?.remainingProblems === 0 && (
                   <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                     <p className="text-sm text-orange-800 font-medium">
                       ⚠️ 오늘의 무료 문제를 모두 풀었어요!
