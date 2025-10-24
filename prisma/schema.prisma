@@ -1,0 +1,155 @@
+// ThinkWise 교육 플랫폼 데이터베이스 스키마
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 사용자 (학생/교사)
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(STUDENT)
+  grade         Int?      // 학년 (초등 1-6)
+  subscription  Subscription @default(FREE)
+  createdAt     DateTime  @default(now())
+
+  // 관계
+  attempts      Attempt[]
+  progress      Progress[]
+
+  @@map("users")
+}
+
+// 역할
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+// 구독 유형
+enum Subscription {
+  FREE    // 무료: 하루 3문제
+  PREMIUM // 유료: 무제한 + 상세 분석
+}
+
+// 문제 유형
+enum ProblemType {
+  AI_VERIFICATION     // AI 정보 검증
+  PROBLEM_DECOMPOSITION // 문제 분해
+}
+
+// 난이도
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+// 문제
+model Problem {
+  id            String      @id @default(cuid())
+  type          ProblemType
+  difficulty    Difficulty
+  title         String
+  content       String      // 문제 내용
+  correctAnswer String      // 정답
+  explanation   String      // 해설
+  subject       String      // 주제 (과학, 사회, 수학 등)
+  grade         Int         // 대상 학년
+
+  // AI 생성 관련
+  generatedBy   String      @default("AI") // AI, TEACHER
+  aiModel       String?     // 사용된 AI 모델
+  reviewed      Boolean     @default(false) // 검토 완료 여부
+  active        Boolean     @default(true)  // 활성 상태
+
+  // 통계
+  totalAttempts Int         @default(0)
+  correctRate   Float       @default(0)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // 관계
+  attempts      Attempt[]
+  steps         ProblemStep[] // 문제 분해 단계 (for PROBLEM_DECOMPOSITION)
+
+  @@map("problems")
+}
+
+// 문제 분해 단계 (복잡한 문제를 나누는 단계들)
+model ProblemStep {
+  id          String   @id @default(cuid())
+  problemId   String
+  stepNumber  Int      // 1, 2, 3...
+  title       String
+  description String
+  hint        String?  // 힌트
+
+  problem     Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@map("problem_steps")
+}
+
+// 학생 문제 풀이 시도
+model Attempt {
+  id          String   @id @default(cuid())
+  userId      String
+  problemId   String
+  answer      String   // 학생 답안
+  isCorrect   Boolean
+  timeSpent   Int      // 소요 시간 (초)
+  attempts    Int      @default(1) // 시도 횟수
+  hintUsed    Boolean  @default(false)
+
+  feedback    String?  // AI 피드백 (프리미엄 전용)
+
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  problem     Problem  @relation(fields: [problemId], references: [id])
+
+  @@map("attempts")
+}
+
+// 학습 진도
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime @default(now())
+
+  // 일일 통계
+  problemsSolved Int     @default(0)
+  correctAnswers Int     @default(0)
+  totalTime      Int     @default(0) // 초
+  streak         Int     @default(0) // 연속 학습 일수
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("progress")
+}
+
+// AI 문제 생성 로그
+model AIGenerationLog {
+  id          String   @id @default(cuid())
+  model       String   // GPT-4, Gemini 등
+  promptType  ProblemType
+  success     Boolean
+  problemId   String?  // 생성된 문제 ID
+  cost        Float?   // API 비용
+  tokensUsed  Int?
+  errorMessage String?
+
+  createdAt   DateTime @default(now())
+
+  @@map("ai_generation_logs")
+}
