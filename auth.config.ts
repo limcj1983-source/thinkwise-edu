@@ -1,49 +1,10 @@
 import type { NextAuthConfig } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { z } from "zod";
-import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
 
 export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
-  providers: [
-    Credentials({
-      async authorize(credentials) {
-        const parsedCredentials = z
-          .object({ email: z.string().email(), password: z.string().min(6) })
-          .safeParse(credentials);
-
-        if (!parsedCredentials.success) return null;
-
-        const { email, password } = parsedCredentials.data;
-
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
-
-        if (!user) return null;
-
-        const passwordsMatch = await bcrypt.compare(password, user.password);
-
-        if (passwordsMatch) {
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            grade: user.grade,
-            subscription: user.subscription,
-          };
-        }
-
-        return null;
-      },
-    }),
-  ],
+  providers: [], // Providers will be added in auth.ts
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
