@@ -7,6 +7,7 @@ const submitSchema = z.object({
   problemId: z.string(),
   answer: z.string(),
   hintUsed: z.boolean().default(false),
+  timeSpent: z.number().default(0), // 소요 시간 (초)
 });
 
 export async function POST(request: Request) {
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
         answer: validatedData.answer,
         isCorrect,
         hintUsed: validatedData.hintUsed,
+        timeSpent: validatedData.timeSpent,
       },
     });
 
@@ -125,6 +127,7 @@ export async function POST(request: Request) {
           correctAnswers: isCorrect
             ? existingProgress.correctAnswers + 1
             : existingProgress.correctAnswers,
+          totalTime: existingProgress.totalTime + validatedData.timeSpent,
         },
       });
     } else {
@@ -134,6 +137,7 @@ export async function POST(request: Request) {
           date: today,
           problemsSolved: 1,
           correctAnswers: isCorrect ? 1 : 0,
+          totalTime: validatedData.timeSpent,
         },
       });
     }
