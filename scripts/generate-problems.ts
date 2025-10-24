@@ -170,13 +170,10 @@ async function saveProblem(
   // AI 생성 로그 기록
   await prisma.aIGenerationLog.create({
     data: {
-      problemType: params.type,
+      promptType: params.type,
       model: 'gemini-1.5-flash',
-      prompt: params.type === 'AI_VERIFICATION'
-        ? createAIVerificationPrompt(params).substring(0, 500)
-        : createProblemDecompositionPrompt(params).substring(0, 500),
-      response: JSON.stringify(generated).substring(0, 1000),
       success: true,
+      problemId: problem.id,
     },
   });
 
@@ -235,11 +232,10 @@ async function main() {
       // 실패 로그 기록
       await prisma.aIGenerationLog.create({
         data: {
-          problemType: typeArg,
+          promptType: typeArg,
           model: 'gemini-1.5-flash',
-          prompt: 'Generation failed before prompt creation',
-          response: error instanceof Error ? error.message : 'Unknown error',
           success: false,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
         },
       });
     }
