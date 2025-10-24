@@ -29,7 +29,8 @@ interface GeneratedProblem {
   explanation: string;
   steps?: {
     stepNumber: number;
-    instruction: string;
+    title: string;
+    description: string;
     hint: string;
   }[];
 }
@@ -84,12 +85,14 @@ function createProblemDecompositionPrompt(params: ProblemGenerationParams): stri
   "steps": [
     {
       "stepNumber": 1,
-      "instruction": "첫 번째 단계에서 할 일",
+      "title": "첫 번째 단계 제목",
+      "description": "첫 번째 단계에서 할 일 설명",
       "hint": "이 단계를 위한 힌트"
     },
     {
       "stepNumber": 2,
-      "instruction": "두 번째 단계에서 할 일",
+      "title": "두 번째 단계 제목",
+      "description": "두 번째 단계에서 할 일 설명",
       "hint": "이 단계를 위한 힌트"
     }
   ]
@@ -156,7 +159,8 @@ async function saveProblem(
         data: {
           problemId: problem.id,
           stepNumber: step.stepNumber,
-          instruction: step.instruction,
+          title: step.title,
+          description: step.description,
           hint: step.hint,
         },
       });
