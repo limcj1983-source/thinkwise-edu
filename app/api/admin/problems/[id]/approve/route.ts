@@ -4,14 +4,14 @@ import { requireAdmin } from '@/lib/auth-helpers';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 관리자 권한 체크
     const { error, session } = await requireAdmin();
     if (error) return error;
 
-    const { id } = params;
+    const { id } = await params;
 
     const problem = await prisma.problem.update({
       where: { id },

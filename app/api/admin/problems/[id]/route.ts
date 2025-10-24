@@ -5,14 +5,14 @@ import { requireAdmin } from '@/lib/auth-helpers';
 // 문제 삭제
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 관리자 권한 체크
     const { error, session } = await requireAdmin();
     if (error) return error;
 
-    const { id } = params;
+    const { id } = await params;
 
     // 관련된 단계들 먼저 삭제
     await prisma.problemStep.deleteMany({
@@ -40,14 +40,14 @@ export async function DELETE(
 // 문제 수정
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 관리자 권한 체크
     const { error, session } = await requireAdmin();
     if (error) return error;
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     const updatedProblem = await prisma.problem.update({
