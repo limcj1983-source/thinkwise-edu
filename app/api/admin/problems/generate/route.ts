@@ -1,42 +1,15 @@
-/**
- * AI 문제 생성 스크립트
- *
- * 사용법:
- * npx tsx scripts/generate-problems.ts --type AI_VERIFICATION --count 10 --grade 3
- * npx tsx scripts/generate-problems.ts --type PROBLEM_DECOMPOSITION --count 5 --grade 5
- */
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-helpers';
+import { ProblemType, Difficulty } from '@prisma/client';
+import { generateText } from '@/lib/gemini';
 
-import { PrismaClient, ProblemType, Difficulty } from '@prisma/client';
-import { generateText } from '../lib/gemini';
-import dotenv from 'dotenv';
-
-// 환경 변수 로드
-dotenv.config();
-
-const prisma = new PrismaClient();
-
-interface ProblemGenerationParams {
-  type: ProblemType;
+// AI 검증 문제 생성 프롬프트
+function createAIVerificationPrompt(params: {
   grade: number;
   difficulty: Difficulty;
   subject: string;
-}
-
-interface GeneratedProblem {
-  title: string;
-  content: string;
-  correctAnswer: string;
-  explanation: string;
-  steps?: {
-    stepNumber: number;
-    title: string;
-    description: string;
-    hint: string;
-  }[];
-}
-
-// AI 검증 문제 생성을 위한 프롬프트
-function createAIVerificationPrompt(params: ProblemGenerationParams): string {
+}): string {
   const styleExamples = [
     {
       name: "스토리형",
@@ -57,7 +30,7 @@ AI 선생님: 좋은 질문이에요! 지구는 자전하면서 원심력 때문
     }
   ];
 
-  const gradeGuidelines = {
+  const gradeGuidelines: Record<number, string> = {
     1: "한글 단어 위주, 짧은 문장, 그림이나 캐릭터 활용",
     2: "쉬운 어휘, 일상 경험 중심",
     3: "기본 과학/사회 개념, 학교 생활 연관",
@@ -72,7 +45,7 @@ AI 선생님: 좋은 질문이에요! 지구는 자전하면서 원심력 때문
 
 **목표**: AI가 생성한 정보에서 오류를 찾는 비판적 사고력 문제를 만들어주세요.
 
-**학년 수준**: ${params.grade}학년 - ${gradeGuidelines[params.grade as keyof typeof gradeGuidelines]}
+**학년 수준**: ${params.grade}학년 - ${gradeGuidelines[params.grade] || "학년별 맞춤"}
 **난이도**: ${params.difficulty === 'EASY' ? '쉬움 (1개의 명확한 오류)' : params.difficulty === 'MEDIUM' ? '보통 (1-2개의 오류)' : '어려움 (2개의 미묘한 오류)'}
 **주제**: ${params.subject}
 **스타일**: ${randomStyle.name}
@@ -103,8 +76,12 @@ ${randomStyle.example}
 **중요**: JSON만 응답하고 다른 설명이나 마크다운은 포함하지 마세요.`;
 }
 
-// 문제 분해 문제 생성을 위한 프롬프트
-function createProblemDecompositionPrompt(params: ProblemGenerationParams): string {
+// 문제 분해 프롬프트
+function createProblemDecompositionPrompt(params: {
+  grade: number;
+  difficulty: Difficulty;
+  subject: string;
+}): string {
   const styleExamples = [
     {
       name: "스토리 중심",
@@ -124,7 +101,7 @@ function createProblemDecompositionPrompt(params: ProblemGenerationParams): stri
     }
   ];
 
-  const gradeGuidelines = {
+  const gradeGuidelines: Record<number, string> = {
     1: "한 번에 한 가지씩, 매우 간단한 2-3단계",
     2: "구체적이고 순차적인 3단계",
     3: "약간의 계획이 필요한 3-4단계",
@@ -134,14 +111,13 @@ function createProblemDecompositionPrompt(params: ProblemGenerationParams): stri
   };
 
   const randomStyle = styleExamples[Math.floor(Math.random() * styleExamples.length)];
-
   const stepCount = params.difficulty === 'EASY' ? 3 : params.difficulty === 'MEDIUM' ? 4 : 5;
 
   return `당신은 초등학교 ${params.grade}학년 학생들을 위한 교육 콘텐츠를 만드는 베테랑 교사입니다.
 
 **목표**: 복잡한 실생활 문제를 논리적 단계로 분해하여 해결하는 사고력 문제를 만들어주세요.
 
-**학년 수준**: ${params.grade}학년 - ${gradeGuidelines[params.grade as keyof typeof gradeGuidelines]}
+**학년 수준**: ${params.grade}학년 - ${gradeGuidelines[params.grade] || "학년별 맞춤"}
 **난이도**: ${params.difficulty === 'EASY' ? '쉬움 (3단계)' : params.difficulty === 'MEDIUM' ? '보통 (4단계)' : '어려움 (5단계)'}
 **주제**: ${params.subject}
 **스타일**: ${randomStyle.name}
@@ -184,155 +160,160 @@ ${randomStyle.example}
 - JSON만 응답하고 다른 설명이나 마크다운은 포함하지 마세요`;
 }
 
-// JSON 응답에서 코드 블록 제거
+// JSON 응답 정리
 function cleanJSONResponse(text: string): string {
-  // ```json ... ``` 형태의 코드 블록 제거
   let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  // 앞뒤 공백 제거
   cleaned = cleaned.trim();
   return cleaned;
 }
 
-// AI를 사용하여 문제 생성
-async function generateProblem(params: ProblemGenerationParams): Promise<GeneratedProblem> {
+// AI 문제 생성 함수
+async function generateProblemWithAI(params: {
+  type: ProblemType;
+  difficulty: Difficulty;
+  grade: number;
+  subject?: string;
+}): Promise<any> {
+  // 주제가 없으면 랜덤 선택
+  const subjects = params.subject
+    ? [params.subject]
+    : params.type === 'AI_VERIFICATION'
+    ? ['동물', '식물', '우주', '역사', '과학', '지리', '환경', '건강', '기술', '문화']
+    : ['학교생활', '친구관계', '가족여행', '용돈관리', '시간관리', '숙제계획', '동아리활동', '봉사활동'];
+
+  const subject = params.subject || subjects[Math.floor(Math.random() * subjects.length)];
+
+  // 프롬프트 생성
   const prompt = params.type === 'AI_VERIFICATION'
-    ? createAIVerificationPrompt(params)
-    : createProblemDecompositionPrompt(params);
+    ? createAIVerificationPrompt({ grade: params.grade, difficulty: params.difficulty, subject })
+    : createProblemDecompositionPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
 
-  console.log(`📝 Generating ${params.type} problem for grade ${params.grade}...`);
-
+  // Gemini API 호출
   const response = await generateText(prompt);
   const cleanedResponse = cleanJSONResponse(response);
 
   try {
-    const problem: GeneratedProblem = JSON.parse(cleanedResponse);
-    return problem;
+    const problem = JSON.parse(cleanedResponse);
+    return {
+      ...problem,
+      subject,
+    };
   } catch (error) {
     console.error('Failed to parse AI response:', cleanedResponse);
-    throw new Error('Invalid JSON response from AI');
+    throw new Error('AI가 올바른 형식의 응답을 생성하지 못했습니다');
   }
 }
 
-// 데이터베이스에 문제 저장
-async function saveProblem(
-  params: ProblemGenerationParams,
-  generated: GeneratedProblem
-): Promise<void> {
-  const problem = await prisma.problem.create({
-    data: {
-      type: params.type,
-      difficulty: params.difficulty,
-      title: generated.title,
-      content: generated.content,
-      correctAnswer: generated.correctAnswer,
-      explanation: generated.explanation,
-      subject: params.subject,
-      grade: params.grade,
-      generatedBy: 'AI',
-      aiModel: 'gemini-1.5-flash',
-      reviewed: false,
-      active: false, // 검토 전까지는 비활성
-    },
-  });
+export async function POST(request: Request) {
+  try {
+    // 관리자 권한 체크
+    const { error, session } = await requireAdmin();
+    if (error) return error;
 
-  // 문제 분해 타입인 경우 단계 정보도 저장
-  if (params.type === 'PROBLEM_DECOMPOSITION' && generated.steps) {
-    for (const step of generated.steps) {
-      await prisma.problemStep.create({
-        data: {
-          problemId: problem.id,
-          stepNumber: step.stepNumber,
-          title: step.title,
-          description: step.description,
-          hint: step.hint,
-        },
-      });
+    const body = await request.json();
+    const { type, difficulty, grade, subject, count } = body;
+
+    if (!type || !difficulty || !grade || !count) {
+      return NextResponse.json(
+        { error: '필수 항목이 누락되었습니다' },
+        { status: 400 }
+      );
     }
-  }
 
-  // AI 생성 로그 기록
-  await prisma.aIGenerationLog.create({
-    data: {
-      promptType: params.type,
-      model: 'gemini-1.5-flash',
-      success: true,
-      problemId: problem.id,
-    },
-  });
-
-  console.log(`✅ Saved problem: ${generated.title}`);
-}
-
-// 주제 목록
-const SUBJECTS = {
-  AI_VERIFICATION: [
-    '동물', '식물', '우주', '역사', '과학', '지리',
-    '환경', '건강', '기술', '문화', '스포츠', '음식'
-  ],
-  PROBLEM_DECOMPOSITION: [
-    '학교생활', '친구관계', '가족여행', '용돈관리', '시간관리',
-    '숙제계획', '동아리활동', '봉사활동', '생일파티', '운동회'
-  ],
-};
-
-// 메인 실행 함수
-async function main() {
-  const args = process.argv.slice(2);
-
-  // 명령줄 인수 파싱
-  const typeArg = args.find(arg => arg.startsWith('--type='))?.split('=')[1] as ProblemType || 'AI_VERIFICATION';
-  const countArg = parseInt(args.find(arg => arg.startsWith('--count='))?.split('=')[1] || '5');
-  const gradeArg = parseInt(args.find(arg => arg.startsWith('--grade='))?.split('=')[1] || '3');
-
-  console.log('🚀 Starting problem generation...');
-  console.log(`Type: ${typeArg}, Count: ${countArg}, Grade: ${gradeArg}\n`);
-
-  const subjects = SUBJECTS[typeArg];
-  const difficulties: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
-
-  for (let i = 0; i < countArg; i++) {
-    try {
-      // 무작위로 주제와 난이도 선택
-      const subject = subjects[Math.floor(Math.random() * subjects.length)];
-      const difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
-
-      const params: ProblemGenerationParams = {
-        type: typeArg,
-        grade: gradeArg,
-        difficulty,
-        subject,
-      };
-
-      const generated = await generateProblem(params);
-      await saveProblem(params, generated);
-
-      // API 호출 제한을 피하기 위해 잠시 대기
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-    } catch (error) {
-      console.error(`❌ Error generating problem ${i + 1}:`, error);
-
-      // 실패 로그 기록
-      await prisma.aIGenerationLog.create({
-        data: {
-          promptType: typeArg,
-          model: 'gemini-1.5-flash',
-          success: false,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        },
-      });
+    if (count > 10) {
+      return NextResponse.json(
+        { error: '한 번에 최대 10개까지 생성할 수 있습니다' },
+        { status: 400 }
+      );
     }
+
+    const createdProblems = [];
+
+    // 여러 개 생성
+    for (let i = 0; i < count; i++) {
+      try {
+        // AI로 문제 생성
+        const generated = await generateProblemWithAI({
+          type,
+          difficulty,
+          grade,
+          subject,
+        });
+
+        // 데이터베이스에 저장
+        const problem = await prisma.problem.create({
+          data: {
+            type,
+            difficulty,
+            title: generated.title,
+            content: generated.content,
+            correctAnswer: generated.correctAnswer,
+            explanation: generated.explanation,
+            subject: generated.subject,
+            grade,
+            generatedBy: 'AI',
+            aiModel: 'gemini-1.5-flash',
+            reviewed: false, // AI 생성 문제는 검토 필요
+            active: false,
+          },
+        });
+
+        // 문제 분해 타입인 경우 단계 정보 저장
+        if (type === 'PROBLEM_DECOMPOSITION' && generated.steps) {
+          for (const step of generated.steps) {
+            await prisma.problemStep.create({
+              data: {
+                problemId: problem.id,
+                stepNumber: step.stepNumber,
+                title: step.title,
+                description: step.description,
+                hint: step.hint || '',
+              },
+            });
+          }
+        }
+
+        // AI 생성 로그 기록
+        await prisma.aIGenerationLog.create({
+          data: {
+            promptType: type,
+            model: 'gemini-1.5-flash',
+            success: true,
+            problemId: problem.id,
+          },
+        });
+
+        createdProblems.push(problem);
+
+        // API 호출 제한을 피하기 위해 잠시 대기 (실제 AI 사용 시)
+        if (i < count - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      } catch (err) {
+        console.error(`Failed to generate problem ${i + 1}:`, err);
+
+        // 실패 로그 기록
+        await prisma.aIGenerationLog.create({
+          data: {
+            promptType: type,
+            model: 'gemini-1.5-flash',
+            success: false,
+            errorMessage: err instanceof Error ? err.message : 'Unknown error',
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({
+      message: `${createdProblems.length}개의 문제가 생성되었습니다`,
+      count: createdProblems.length,
+      problems: createdProblems,
+    });
+  } catch (error) {
+    console.error('Generate problems error:', error);
+    return NextResponse.json(
+      { error: 'AI 문제 생성 중 오류가 발생했습니다' },
+      { status: 500 }
+    );
   }
-
-  console.log('\n✨ Problem generation completed!');
 }
-
-// 스크립트 실행
-main()
-  .catch((e) => {
-    console.error('Fatal error:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
