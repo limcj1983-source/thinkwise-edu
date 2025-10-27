@@ -16,11 +16,13 @@ function getGeminiClient() {
 }
 
 export function getGeminiModel() {
-  // 사용 가능한 모델명들:
-  // - gemini-1.5-flash-latest (최신)
-  // - gemini-1.5-pro-latest
-  // - gemini-pro (레거시)
-  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
+  // 사용 가능한 모델명들 (v1 stable):
+  // - gemini-1.5-flash (권장)
+  // - gemini-1.5-pro
+  // - gemini-pro
+  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+
+  console.log('Using Gemini model:', modelName);
 
   return getGeminiClient().getGenerativeModel({
     model: modelName
