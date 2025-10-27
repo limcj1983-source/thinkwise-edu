@@ -28,6 +28,14 @@ export default function ProblemsPage() {
     status: "ALL", // ALL, ACTIVE, INACTIVE, REVIEWED, PENDING
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    type: "AI_VERIFICATION",
+    difficulty: "EASY",
+    grade: "3",
+    subject: "",
+  });
 
   useEffect(() => {
     fetchProblems();
@@ -87,6 +95,43 @@ export default function ProblemsPage() {
     } catch (error) {
       console.error("Failed to delete:", error);
       alert("오류가 발생했습니다.");
+    }
+  };
+
+  const handleCreateProblem = async () => {
+    if (!createForm.subject.trim()) {
+      alert("주제를 입력해주세요!");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const response = await fetch("/api/admin/problems", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createForm),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("문제가 생성되었습니다!");
+        setShowCreateModal(false);
+        setCreateForm({
+          type: "AI_VERIFICATION",
+          difficulty: "EASY",
+          grade: "3",
+          subject: "",
+        });
+        fetchProblems();
+      } else {
+        alert(data.error || "문제 생성에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("Failed to create problem:", error);
+      alert("오류가 발생했습니다.");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -162,13 +207,21 @@ export default function ProblemsPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* 제목 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            문제 관리 📚
-          </h1>
-          <p className="text-gray-600">
-            모든 문제를 확인하고 관리하세요.
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              문제 관리 📚
+            </h1>
+            <p className="text-gray-600">
+              모든 문제를 확인하고 관리하세요.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition"
+          >
+            ➕ 새 문제 생성
+          </button>
         </div>
 
         {/* 통계 카드 */}
@@ -399,6 +452,117 @@ export default function ProblemsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* 문제 생성 모달 */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                새 문제 생성 🎯
+              </h2>
+
+              <div className="space-y-4">
+                {/* 문제 유형 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    문제 유형
+                  </label>
+                  <select
+                    value={createForm.type}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, type: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={creating}
+                  >
+                    <option value="AI_VERIFICATION">AI 검증</option>
+                    <option value="PROBLEM_DECOMPOSITION">문제 분해</option>
+                  </select>
+                </div>
+
+                {/* 학년 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    학년
+                  </label>
+                  <select
+                    value={createForm.grade}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, grade: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={creating}
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((grade) => (
+                      <option key={grade} value={grade}>
+                        {grade}학년
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 난이도 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    난이도
+                  </label>
+                  <select
+                    value={createForm.difficulty}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, difficulty: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={creating}
+                  >
+                    <option value="EASY">쉬움</option>
+                    <option value="MEDIUM">보통</option>
+                    <option value="HARD">어려움</option>
+                  </select>
+                </div>
+
+                {/* 주제 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    주제
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.subject}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, subject: e.target.value })
+                    }
+                    placeholder="예: 동물, 역사, 과학 등"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={creating}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={creating}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleCreateProblem}
+                  disabled={creating}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transition disabled:opacity-50"
+                >
+                  {creating ? "생성 중..." : "생성하기"}
+                </button>
+              </div>
+
+              {creating && (
+                <p className="mt-4 text-sm text-gray-600 text-center">
+                  AI가 문제를 생성하고 있습니다... 잠시만 기다려주세요.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </main>

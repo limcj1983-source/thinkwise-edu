@@ -7,7 +7,8 @@ import { useState, useEffect } from "react";
 interface ProblemStep {
   id: string;
   stepNumber: number;
-  instruction: string;
+  title: string;
+  description: string;
   hint: string;
 }
 
@@ -243,12 +244,15 @@ export default function ProblemSolvePage() {
                     className="border border-gray-200 rounded-lg p-4"
                   >
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-gray-900">
-                        단계 {step.stepNumber}: {step.instruction}
-                      </h3>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 mb-1">
+                          단계 {step.stepNumber}: {step.title}
+                        </h3>
+                        <p className="text-sm text-gray-600">{step.description}</p>
+                      </div>
                       <button
                         onClick={() => toggleHint(step.stepNumber)}
-                        className="text-sm text-blue-600 hover:text-blue-700"
+                        className="text-sm text-blue-600 hover:text-blue-700 ml-4"
                       >
                         {showHints[step.stepNumber] ? "힌트 숨기기" : "💡 힌트 보기"}
                       </button>
