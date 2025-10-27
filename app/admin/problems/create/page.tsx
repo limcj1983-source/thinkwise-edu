@@ -86,14 +86,38 @@ export default function CreateProblemPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(`${data.count}개의 문제가 생성되었습니다! 검토 페이지에서 확인하세요.`);
+        let message = `${data.count}개의 문제가 생성되었습니다! 검토 페이지에서 확인하세요.`;
+
+        // 일부 실패한 경우 경고 표시
+        if (data.warning) {
+          message += `\n\n⚠️ ${data.warning}`;
+        }
+
+        alert(message);
         router.push("/admin/review");
       } else {
-        alert(data.error || "AI 문제 생성에 실패했습니다");
+        // 에러 메시지 구성
+        let errorMessage = data.error || "AI 문제 생성에 실패했습니다";
+
+        if (data.message) {
+          errorMessage += `\n\n${data.message}`;
+        }
+
+        if (data.details) {
+          if (typeof data.details === 'string') {
+            errorMessage += `\n\n상세: ${data.details}`;
+          } else if (Array.isArray(data.details)) {
+            const errors = data.details.map((d: any) => `문제 ${d.index}: ${d.error}`).join('\n');
+            errorMessage += `\n\n${errors}`;
+          }
+        }
+
+        console.error("AI generation error:", data);
+        alert(errorMessage);
       }
     } catch (error) {
       console.error("Failed to generate problems:", error);
-      alert("AI 문제 생성 중 오류가 발생했습니다");
+      alert("AI 문제 생성 중 네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.");
     } finally {
       setLoading(false);
     }

@@ -227,7 +227,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // GEMINI_API_KEY 확인
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your-gemini-api-key-here') {
+      console.error('GEMINI_API_KEY is not configured');
+      return NextResponse.json(
+        { error: 'Gemini API 키가 설정되지 않았습니다. 관리자에게 문의하세요.' },
+        { status: 500 }
+      );
+    }
+
+    console.log('Starting AI problem generation:', { type, difficulty, grade, subject, count });
+
     const createdProblems = [];
+    const failedProblems = [];
 
     // 여러 개 생성
     for (let i = 0; i < count; i++) {
@@ -290,7 +302,14 @@ export async function POST(request: Request) {
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
       } catch (err) {
-        console.error(`Failed to generate problem ${i + 1}:`, err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`Failed to generate problem ${i + 1}:`, errorMessage);
+        console.error('Error details:', err);
+
+        failedProblems.push({
+          index: i + 1,
+          error: errorMessage
+        });
 
         // 실패 로그 기록
         await prisma.aIGenerationLog.create({
@@ -298,21 +317,50 @@ export async function POST(request: Request) {
             promptType: type,
             model: 'gemini-1.5-flash',
             success: false,
-            errorMessage: err instanceof Error ? err.message : 'Unknown error',
+            errorMessage: errorMessage,
           },
         });
       }
     }
 
-    return NextResponse.json({
+    console.log('AI problem generation completed:', {
+      successCount: createdProblems.length,
+      failedCount: failedProblems.length,
+      total: count
+    });
+
+    // 모든 문제 생성이 실패한 경우
+    if (createdProblems.length === 0) {
+      return NextResponse.json({
+        error: 'AI 문제 생성에 실패했습니다',
+        message: '모든 문제 생성이 실패했습니다. 다시 시도해주세요.',
+        details: failedProblems,
+        count: 0
+      }, { status: 500 });
+    }
+
+    // 일부만 성공한 경우
+    const response: any = {
       message: `${createdProblems.length}개의 문제가 생성되었습니다`,
       count: createdProblems.length,
       problems: createdProblems,
-    });
+    };
+
+    if (failedProblems.length > 0) {
+      response.warning = `${failedProblems.length}개의 문제 생성이 실패했습니다`;
+      response.failedDetails = failedProblems;
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Generate problems error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Generate problems error:', errorMessage);
+    console.error('Error stack:', error);
     return NextResponse.json(
-      { error: 'AI 문제 생성 중 오류가 발생했습니다' },
+      {
+        error: 'AI 문제 생성 중 오류가 발생했습니다',
+        details: errorMessage
+      },
       { status: 500 }
     );
   }
