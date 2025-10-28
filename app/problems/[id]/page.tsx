@@ -15,12 +15,14 @@ interface ProblemStep {
 interface Problem {
   id: string;
   type: string;
+  answerFormat: string; // SHORT_ANSWER, MULTIPLE_CHOICE, TRUE_FALSE
   difficulty: string;
   title: string;
   content: string;
   correctAnswer: string;
   explanation: string;
   subject: string;
+  options?: string[]; // 객관식 선택지
   steps?: ProblemStep[];
 }
 
@@ -67,17 +69,18 @@ export default function ProblemSolvePage() {
     if (!problem) return;
 
     // 답변 검증
-    if (problem.type === "AI_VERIFICATION") {
-      if (!userAnswer.trim()) {
-        alert("답변을 입력해주세요!");
-        return;
-      }
-    } else if (problem.type === "PROBLEM_DECOMPOSITION") {
+    if (problem.type === "PROBLEM_DECOMPOSITION") {
       const allStepsFilled = problem.steps?.every(
         (step) => stepAnswers[step.stepNumber]?.trim()
       );
       if (!allStepsFilled) {
         alert("모든 단계를 작성해주세요!");
+        return;
+      }
+    } else {
+      // AI_VERIFICATION: answerFormat에 따라 검증
+      if (!userAnswer.trim()) {
+        alert("답변을 선택하거나 입력해주세요!");
         return;
       }
     }
@@ -91,9 +94,9 @@ export default function ProblemSolvePage() {
         body: JSON.stringify({
           problemId: problem.id,
           answer:
-            problem.type === "AI_VERIFICATION"
-              ? userAnswer
-              : JSON.stringify(stepAnswers),
+            problem.type === "PROBLEM_DECOMPOSITION"
+              ? JSON.stringify(stepAnswers)
+              : userAnswer,
           hintUsed: Object.values(showHints).some((used) => used),
         }),
       });
@@ -229,13 +232,89 @@ export default function ProblemSolvePage() {
             </h2>
 
             {problem.type === "AI_VERIFICATION" ? (
-              <textarea
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition min-h-[150px]"
-                placeholder="틀린 부분과 이유를 자세히 설명해주세요..."
-                disabled={submitting}
-              />
+              <>
+                {/* 객관식 */}
+                {problem.answerFormat === "MULTIPLE_CHOICE" && problem.options ? (
+                  <div className="space-y-3">
+                    {problem.options.map((option, index) => {
+                      const label = String.fromCharCode(65 + index); // A, B, C, D
+                      return (
+                        <label
+                          key={index}
+                          className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                            userAnswer === label
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-300 hover:border-blue-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="answer"
+                            value={label}
+                            checked={userAnswer === label}
+                            onChange={(e) => setUserAnswer(e.target.value)}
+                            disabled={submitting}
+                            className="w-5 h-5 text-blue-600"
+                          />
+                          <span className="font-semibold text-gray-700">{label}.</span>
+                          <span className="flex-1 text-gray-800">{option}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : problem.answerFormat === "TRUE_FALSE" ? (
+                  /* OX 퀴즈 */
+                  <div className="space-y-3">
+                    <label
+                      className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                        userAnswer === "O"
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-300 hover:border-green-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="answer"
+                        value="O"
+                        checked={userAnswer === "O"}
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        disabled={submitting}
+                        className="w-5 h-5 text-green-600"
+                      />
+                      <span className="text-2xl">⭕</span>
+                      <span className="flex-1 text-gray-800 font-semibold">참 (O)</span>
+                    </label>
+                    <label
+                      className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                        userAnswer === "X"
+                          ? "border-red-500 bg-red-50"
+                          : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="answer"
+                        value="X"
+                        checked={userAnswer === "X"}
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        disabled={submitting}
+                        className="w-5 h-5 text-red-600"
+                      />
+                      <span className="text-2xl">❌</span>
+                      <span className="flex-1 text-gray-800 font-semibold">거짓 (X)</span>
+                    </label>
+                  </div>
+                ) : (
+                  /* 주관식 */
+                  <textarea
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition min-h-[150px]"
+                    placeholder="틀린 부분과 이유를 자세히 설명해주세요..."
+                    disabled={submitting}
+                  />
+                )}
+              </>
             ) : (
               <div className="space-y-6">
                 {problem.steps?.map((step) => (
