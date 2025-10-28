@@ -231,48 +231,139 @@ export default function ProblemSolvePage() {
                 : "🧩 단계별로 문제를 해결해봐요!"}
             </h2>
 
-            {/* 문제 분해 단계 (주관식인 경우만) */}
-            {problem.type === "PROBLEM_DECOMPOSITION" && problem.answerFormat === "SHORT_ANSWER" && problem.steps ? (
+            {/* 문제 분해 - 단계별 입력 */}
+            {problem.type === "PROBLEM_DECOMPOSITION" && problem.steps ? (
               <div className="space-y-6">
-                {problem.steps.map((step) => (
+                {problem.steps.map((step, index) => (
                   <div
                     key={step.id}
-                    className="border border-gray-200 rounded-lg p-4"
+                    className="border-2 border-gray-200 rounded-xl p-5 bg-gradient-to-br from-white to-gray-50"
                   >
+                    {/* 단계 헤더 */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
+                            단계 {step.stepNumber}
+                          </span>
+                          {stepAnswers[step.stepNumber] && (
+                            <span className="text-green-600 text-sm">✓ 완료</span>
+                          )}
+                        </div>
                         <h3 className="font-bold text-gray-900 mb-1">
-                          단계 {step.stepNumber}: {step.title}
+                          {step.title}
                         </h3>
                         <p className="text-sm text-gray-600">{step.description}</p>
                       </div>
                       <button
                         onClick={() => toggleHint(step.stepNumber)}
-                        className="text-sm text-blue-600 hover:text-blue-700 ml-4"
+                        className="text-sm text-blue-600 hover:text-blue-700 ml-4 whitespace-nowrap"
                       >
                         {showHints[step.stepNumber] ? "힌트 숨기기" : "💡 힌트 보기"}
                       </button>
                     </div>
 
+                    {/* 힌트 */}
                     {showHints[step.stepNumber] && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-3 text-sm text-gray-700">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-gray-700">
                         💡 {step.hint}
                       </div>
                     )}
 
-                    <textarea
-                      value={stepAnswers[step.stepNumber] || ""}
-                      onChange={(e) =>
-                        setStepAnswers((prev) => ({
-                          ...prev,
-                          [step.stepNumber]: e.target.value,
-                        }))
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition"
-                      placeholder="이 단계에서 할 일을 적어보세요..."
-                      rows={3}
-                      disabled={submitting}
-                    />
+                    {/* 선택한 답변 표시 */}
+                    {stepAnswers[step.stepNumber] && problem.answerFormat !== "SHORT_ANSWER" && (
+                      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-blue-700">선택한 답변:</span>
+                            <span className="text-sm text-blue-900 font-bold">
+                              {problem.answerFormat === "MULTIPLE_CHOICE"
+                                ? `${stepAnswers[step.stepNumber]} - ${problem.options?.[stepAnswers[step.stepNumber].charCodeAt(0) - 65]}`
+                                : stepAnswers[step.stepNumber] === "O" ? "⭕ 참" : "❌ 거짓"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const newAnswers = { ...stepAnswers };
+                              delete newAnswers[step.stepNumber];
+                              setStepAnswers(newAnswers);
+                            }}
+                            className="text-xs text-red-600 hover:text-red-700 underline"
+                          >
+                            수정하기
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 답변 입력 UI */}
+                    {!stepAnswers[step.stepNumber] && (
+                      <>
+                        {problem.answerFormat === "SHORT_ANSWER" ? (
+                          <textarea
+                            value={stepAnswers[step.stepNumber] || ""}
+                            onChange={(e) =>
+                              setStepAnswers((prev) => ({
+                                ...prev,
+                                [step.stepNumber]: e.target.value,
+                              }))
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition"
+                            placeholder="이 단계에서 할 일을 적어보세요..."
+                            rows={3}
+                            disabled={submitting}
+                          />
+                        ) : problem.answerFormat === "MULTIPLE_CHOICE" && problem.options ? (
+                          <div className="space-y-2">
+                            {problem.options.map((option, optIndex) => {
+                              const label = String.fromCharCode(65 + optIndex);
+                              return (
+                                <button
+                                  key={optIndex}
+                                  onClick={() =>
+                                    setStepAnswers((prev) => ({
+                                      ...prev,
+                                      [step.stepNumber]: label,
+                                    }))
+                                  }
+                                  className="w-full flex items-center gap-3 p-3 border-2 border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition text-left"
+                                >
+                                  <span className="font-semibold text-gray-700 min-w-[24px]">{label}.</span>
+                                  <span className="flex-1 text-gray-800">{option}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : problem.answerFormat === "TRUE_FALSE" ? (
+                          <div className="space-y-2">
+                            <button
+                              onClick={() =>
+                                setStepAnswers((prev) => ({
+                                  ...prev,
+                                  [step.stepNumber]: "O",
+                                }))
+                              }
+                              className="w-full flex items-center gap-3 p-3 border-2 border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition"
+                            >
+                              <span className="text-2xl">⭕</span>
+                              <span className="flex-1 text-gray-800 font-semibold">참 (O)</span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                setStepAnswers((prev) => ({
+                                  ...prev,
+                                  [step.stepNumber]: "X",
+                                }))
+                              }
+                              className="w-full flex items-center gap-3 p-3 border-2 border-gray-300 rounded-lg hover:border-red-400 hover:bg-red-50 transition"
+                            >
+                              <span className="text-2xl">❌</span>
+                              <span className="flex-1 text-gray-800 font-semibold">거짓 (X)</span>
+                            </button>
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
