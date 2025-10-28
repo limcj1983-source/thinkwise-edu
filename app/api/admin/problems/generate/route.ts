@@ -264,7 +264,7 @@ export async function POST(request: Request) {
             subject: generated.subject,
             grade,
             generatedBy: 'AI',
-            aiModel: process.env.GEMINI_MODEL || 'gemini-pro',
+            aiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
             reviewed: false, // AI 생성 문제는 검토 필요
             active: false,
           },
@@ -289,7 +289,7 @@ export async function POST(request: Request) {
         await prisma.aIGenerationLog.create({
           data: {
             promptType: type,
-            model: process.env.GEMINI_MODEL || 'gemini-pro',
+            model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
             success: true,
             problemId: problem.id,
           },
@@ -315,7 +315,7 @@ export async function POST(request: Request) {
         await prisma.aIGenerationLog.create({
           data: {
             promptType: type,
-            model: process.env.GEMINI_MODEL || 'gemini-pro',
+            model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
             success: false,
             errorMessage: errorMessage,
           },

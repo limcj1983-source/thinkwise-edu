@@ -9,7 +9,8 @@ export async function generateText(prompt: string): Promise<string> {
   }
 
   // 사용할 모델 (환경변수로 변경 가능)
-  const model = process.env.GEMINI_MODEL || 'gemini-pro';
+  // 사용 가능한 모델: gemini-2.0-flash, gemini-2.5-flash, gemini-flash-latest
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
   console.log('Calling Gemini REST API with model:', model);
   console.log('API Key prefix:', apiKey.substring(0, 10) + '...');
