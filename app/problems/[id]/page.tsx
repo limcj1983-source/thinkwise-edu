@@ -231,93 +231,10 @@ export default function ProblemSolvePage() {
                 : "🧩 단계별로 문제를 해결해봐요!"}
             </h2>
 
-            {problem.type === "AI_VERIFICATION" ? (
-              <>
-                {/* 객관식 */}
-                {problem.answerFormat === "MULTIPLE_CHOICE" && problem.options ? (
-                  <div className="space-y-3">
-                    {problem.options.map((option, index) => {
-                      const label = String.fromCharCode(65 + index); // A, B, C, D
-                      return (
-                        <label
-                          key={index}
-                          className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
-                            userAnswer === label
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-300 hover:border-blue-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="answer"
-                            value={label}
-                            checked={userAnswer === label}
-                            onChange={(e) => setUserAnswer(e.target.value)}
-                            disabled={submitting}
-                            className="w-5 h-5 text-blue-600"
-                          />
-                          <span className="font-semibold text-gray-700">{label}.</span>
-                          <span className="flex-1 text-gray-800">{option}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : problem.answerFormat === "TRUE_FALSE" ? (
-                  /* OX 퀴즈 */
-                  <div className="space-y-3">
-                    <label
-                      className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
-                        userAnswer === "O"
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-300 hover:border-green-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="answer"
-                        value="O"
-                        checked={userAnswer === "O"}
-                        onChange={(e) => setUserAnswer(e.target.value)}
-                        disabled={submitting}
-                        className="w-5 h-5 text-green-600"
-                      />
-                      <span className="text-2xl">⭕</span>
-                      <span className="flex-1 text-gray-800 font-semibold">참 (O)</span>
-                    </label>
-                    <label
-                      className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
-                        userAnswer === "X"
-                          ? "border-red-500 bg-red-50"
-                          : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="answer"
-                        value="X"
-                        checked={userAnswer === "X"}
-                        onChange={(e) => setUserAnswer(e.target.value)}
-                        disabled={submitting}
-                        className="w-5 h-5 text-red-600"
-                      />
-                      <span className="text-2xl">❌</span>
-                      <span className="flex-1 text-gray-800 font-semibold">거짓 (X)</span>
-                    </label>
-                  </div>
-                ) : (
-                  /* 주관식 */
-                  <textarea
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition min-h-[150px]"
-                    placeholder="틀린 부분과 이유를 자세히 설명해주세요..."
-                    disabled={submitting}
-                  />
-                )}
-              </>
-            ) : (
+            {/* 문제 분해 단계 (주관식인 경우만) */}
+            {problem.type === "PROBLEM_DECOMPOSITION" && problem.answerFormat === "SHORT_ANSWER" && problem.steps ? (
               <div className="space-y-6">
-                {problem.steps?.map((step) => (
+                {problem.steps.map((step) => (
                   <div
                     key={step.id}
                     className="border border-gray-200 rounded-lg p-4"
@@ -359,6 +276,86 @@ export default function ProblemSolvePage() {
                   </div>
                 ))}
               </div>
+            ) : problem.answerFormat === "MULTIPLE_CHOICE" && problem.options ? (
+              /* 객관식 */
+                  <div className="space-y-3">
+                    {problem.options.map((option, index) => {
+                      const label = String.fromCharCode(65 + index); // A, B, C, D
+                      return (
+                        <label
+                          key={index}
+                          className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                            userAnswer === label
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-300 hover:border-blue-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="answer"
+                            value={label}
+                            checked={userAnswer === label}
+                            onChange={(e) => setUserAnswer(e.target.value)}
+                            disabled={submitting}
+                            className="w-5 h-5 text-blue-600"
+                          />
+                          <span className="font-semibold text-gray-700">{label}.</span>
+                          <span className="flex-1 text-gray-800">{option}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+            ) : problem.answerFormat === "TRUE_FALSE" ? (
+              /* OX 퀴즈 */
+              <div className="space-y-3">
+                <label
+                  className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                    userAnswer === "O"
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-300 hover:border-green-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="answer"
+                    value="O"
+                    checked={userAnswer === "O"}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    disabled={submitting}
+                    className="w-5 h-5 text-green-600"
+                  />
+                  <span className="text-2xl">⭕</span>
+                  <span className="flex-1 text-gray-800 font-semibold">참 (O)</span>
+                </label>
+                <label
+                  className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                    userAnswer === "X"
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="answer"
+                    value="X"
+                    checked={userAnswer === "X"}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    disabled={submitting}
+                    className="w-5 h-5 text-red-600"
+                  />
+                  <span className="text-2xl">❌</span>
+                  <span className="flex-1 text-gray-800 font-semibold">거짓 (X)</span>
+                </label>
+              </div>
+            ) : (
+              /* 주관식 (AI 검증용) */
+              <textarea
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition min-h-[150px]"
+                placeholder="틀린 부분과 이유를 자세히 설명해주세요..."
+                disabled={submitting}
+              />
             )}
 
             <button

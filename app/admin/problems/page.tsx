@@ -216,12 +216,12 @@ export default function ProblemsPage() {
               모든 문제를 확인하고 관리하세요.
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition"
+          <Link
+            href="/admin/problems/create"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition inline-block"
           >
             ➕ 새 문제 생성
-          </button>
+          </Link>
         </div>
 
         {/* 통계 카드 */}
