@@ -333,29 +333,47 @@ async function generateProblemWithAI(params: {
 
   // 답변 형식에 따라 프롬프트 수정
   if (params.answerFormat === 'MULTIPLE_CHOICE') {
-    // 객관식: 기본 프롬프트에 객관식 형식 요구사항 추가
-    prompt = basePrompt.replace(
-      '**다음 JSON 형식으로만 응답하세요**:',
-      '**답변 형식**: 4지선다 객관식 (A, B, C, D)\n\n**다음 JSON 형식으로만 응답하세요**:'
-    ).replace(
-      '"correctAnswer": "찾아야 할 오류를 구체적으로 설명',
-      '"options": ["선택지 A 내용 (30-80자)", "선택지 B 내용", "선택지 C 내용", "선택지 D 내용"],\n  "correctAnswer": "A, B, C, D 중 정답 (예: \\"A\\")'
-    ).replace(
-      '"correctAnswer": "문제 해결의 핵심 접근 방법 요약',
-      '"options": ["선택지 A 내용 (30-80자)", "선택지 B 내용", "선택지 C 내용", "선택지 D 내용"],\n  "correctAnswer": "A, B, C, D 중 정답 (예: \\"A\\")'
-    );
+    // 객관식
+    if (params.type === 'PROBLEM_DECOMPOSITION') {
+      // 문제 분해 + 객관식: 각 단계마다 선택지 필요
+      prompt = basePrompt.replace(
+        '**다음 JSON 형식으로만 응답하세요**:',
+        '**답변 형식**: 각 단계마다 4지선다 객관식 (A, B, C, D)\n\n**다음 JSON 형식으로만 응답하세요**:'
+      ).replace(
+        '"hint": "이 단계를 수행할 때 도움이 되는 구체적인 팁이나 질문"',
+        '"hint": "이 단계를 수행할 때 도움이 되는 구체적인 팁이나 질문",\n      "options": ["선택지 A (30-60자)", "선택지 B", "선택지 C", "선택지 D"],\n      "correctAnswer": "A, B, C, D 중 정답 (예: \\"A\\")"'
+      );
+    } else {
+      // AI 검증 + 객관식
+      prompt = basePrompt.replace(
+        '**다음 JSON 형식으로만 응답하세요**:',
+        '**답변 형식**: 4지선다 객관식 (A, B, C, D)\n\n**다음 JSON 형식으로만 응답하세요**:'
+      ).replace(
+        '"correctAnswer": "찾아야 할 오류를 구체적으로 설명',
+        '"options": ["선택지 A 내용 (30-80자)", "선택지 B 내용", "선택지 C 내용", "선택지 D 내용"],\n  "correctAnswer": "A, B, C, D 중 정답 (예: \\"A\\")'
+      );
+    }
   } else if (params.answerFormat === 'TRUE_FALSE') {
-    // OX 퀴즈: 기본 프롬프트에 참/거짓 형식 요구사항 추가
-    prompt = basePrompt.replace(
-      '**다음 JSON 형식으로만 응답하세요**:',
-      '**답변 형식**: OX 퀴즈 (참 또는 거짓)\n\n**다음 JSON 형식으로만 응답하세요**:'
-    ).replace(
-      '"correctAnswer": "찾아야 할 오류를 구체적으로 설명',
-      '"correctAnswer": "O 또는 X"'
-    ).replace(
-      '"correctAnswer": "문제 해결의 핵심 접근 방법 요약',
-      '"correctAnswer": "O 또는 X"'
-    );
+    // OX 퀴즈
+    if (params.type === 'PROBLEM_DECOMPOSITION') {
+      // 문제 분해 + OX: 각 단계마다 O/X 정답 필요
+      prompt = basePrompt.replace(
+        '**다음 JSON 형식으로만 응답하세요**:',
+        '**답변 형식**: 각 단계마다 OX 퀴즈 (참 또는 거짓)\n\n**다음 JSON 형식으로만 응답하세요**:'
+      ).replace(
+        '"hint": "이 단계를 수행할 때 도움이 되는 구체적인 팁이나 질문"',
+        '"hint": "이 단계를 수행할 때 도움이 되는 구체적인 팁이나 질문",\n      "correctAnswer": "O 또는 X"'
+      );
+    } else {
+      // AI 검증 + OX
+      prompt = basePrompt.replace(
+        '**다음 JSON 형식으로만 응답하세요**:',
+        '**답변 형식**: OX 퀴즈 (참 또는 거짓)\n\n**다음 JSON 형식으로만 응답하세요**:'
+      ).replace(
+        '"correctAnswer": "찾아야 할 오류를 구체적으로 설명',
+        '"correctAnswer": "O 또는 X"'
+      );
+    }
   } else {
     // 주관식: 기본 프롬프트 그대로 사용
     prompt = basePrompt;
@@ -459,6 +477,8 @@ export async function POST(request: Request) {
                 title: step.title,
                 description: step.description,
                 hint: step.hint || '',
+                options: step.options || null, // 객관식 선택지 (각 단계별)
+                correctAnswer: step.correctAnswer || null, // 정답 (각 단계별)
               },
             });
           }

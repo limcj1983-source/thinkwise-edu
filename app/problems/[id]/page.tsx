@@ -10,6 +10,8 @@ interface ProblemStep {
   title: string;
   description: string;
   hint: string;
+  options?: string[]; // 객관식 선택지 (각 단계별)
+  correctAnswer?: string; // 정답 (각 단계별)
 }
 
 interface Problem {
@@ -278,7 +280,7 @@ export default function ProblemSolvePage() {
                             <span className="text-sm font-semibold text-blue-700">선택한 답변:</span>
                             <span className="text-sm text-blue-900 font-bold">
                               {problem.answerFormat === "MULTIPLE_CHOICE"
-                                ? `${stepAnswers[step.stepNumber]} - ${problem.options?.[stepAnswers[step.stepNumber].charCodeAt(0) - 65]}`
+                                ? `${stepAnswers[step.stepNumber]} - ${step.options?.[stepAnswers[step.stepNumber].charCodeAt(0) - 65]}`
                                 : stepAnswers[step.stepNumber] === "O" ? "⭕ 참" : "❌ 거짓"}
                             </span>
                           </div>
@@ -313,9 +315,9 @@ export default function ProblemSolvePage() {
                             rows={3}
                             disabled={submitting}
                           />
-                        ) : problem.answerFormat === "MULTIPLE_CHOICE" && problem.options ? (
+                        ) : problem.answerFormat === "MULTIPLE_CHOICE" && step.options ? (
                           <div className="space-y-2">
-                            {problem.options.map((option, optIndex) => {
+                            {step.options.map((option, optIndex) => {
                               const label = String.fromCharCode(65 + optIndex);
                               return (
                                 <button

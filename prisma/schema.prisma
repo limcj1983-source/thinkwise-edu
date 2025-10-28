@@ -104,14 +104,18 @@ model Problem {
 
 // 문제 분해 단계 (복잡한 문제를 나누는 단계들)
 model ProblemStep {
-  id          String   @id @default(cuid())
-  problemId   String
-  stepNumber  Int      // 1, 2, 3...
-  title       String
-  description String
-  hint        String?  // 힌트
+  id            String   @id @default(cuid())
+  problemId     String
+  stepNumber    Int      // 1, 2, 3...
+  title         String
+  description   String
+  hint          String?  // 힌트
 
-  problem     Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  // 객관식/OX용 필드
+  options       Json?    // 객관식 선택지 배열: ["A", "B", "C", "D"]
+  correctAnswer String?  // 정답 (객관식: "A", OX: "O" 또는 "X", 주관식: 텍스트)
+
+  problem       Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
   @@map("problem_steps")
 }
