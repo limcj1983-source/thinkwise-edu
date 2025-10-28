@@ -14,12 +14,18 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // 관련된 단계들 먼저 삭제
+    // 관련된 데이터들 먼저 삭제
+    // 1. 풀이 시도 기록 삭제
+    await prisma.attempt.deleteMany({
+      where: { problemId: id },
+    });
+
+    // 2. 문제 분해 단계 삭제
     await prisma.problemStep.deleteMany({
       where: { problemId: id },
     });
 
-    // 문제 삭제
+    // 3. 문제 삭제
     await prisma.problem.delete({
       where: { id },
     });
