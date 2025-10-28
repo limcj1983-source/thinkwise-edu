@@ -1,20 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-helpers';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const { error, session } = await requireAuth();
+    if (error) return error;
 
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다' },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
+    const userId = session!.user.id;
 
     // 1. 전체 통계
     const totalAttempts = await prisma.attempt.count({
