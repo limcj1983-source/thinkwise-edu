@@ -299,23 +299,25 @@ export default function ProblemSolvePage() {
                     )}
 
                     {/* 답변 입력 UI */}
-                    {!stepAnswers[step.stepNumber] && (
+                    {problem.answerFormat === "SHORT_ANSWER" ? (
+                      /* 주관식은 항상 표시 */
+                      <textarea
+                        value={stepAnswers[step.stepNumber] || ""}
+                        onChange={(e) =>
+                          setStepAnswers((prev) => ({
+                            ...prev,
+                            [step.stepNumber]: e.target.value,
+                          }))
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition"
+                        placeholder="이 단계에서 할 일을 적어보세요..."
+                        rows={3}
+                        disabled={submitting}
+                      />
+                    ) : !stepAnswers[step.stepNumber] && (
+                      /* 객관식/OX는 선택 전에만 표시 */
                       <>
-                        {problem.answerFormat === "SHORT_ANSWER" ? (
-                          <textarea
-                            value={stepAnswers[step.stepNumber] || ""}
-                            onChange={(e) =>
-                              setStepAnswers((prev) => ({
-                                ...prev,
-                                [step.stepNumber]: e.target.value,
-                              }))
-                            }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition"
-                            placeholder="이 단계에서 할 일을 적어보세요..."
-                            rows={3}
-                            disabled={submitting}
-                          />
-                        ) : problem.answerFormat === "MULTIPLE_CHOICE" && step.options ? (
+                        {problem.answerFormat === "MULTIPLE_CHOICE" && step.options ? (
                           <div className="space-y-2">
                             {step.options.map((option, optIndex) => {
                               const label = String.fromCharCode(65 + optIndex);
