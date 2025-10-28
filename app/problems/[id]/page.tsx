@@ -299,8 +299,8 @@ export default function ProblemSolvePage() {
                     )}
 
                     {/* 답변 입력 UI */}
-                    {problem.answerFormat === "SHORT_ANSWER" || !step.options ? (
-                      /* 주관식 또는 선택지가 없는 경우 - 항상 표시 */
+                    {problem.answerFormat === "SHORT_ANSWER" ? (
+                      /* 주관식 - 항상 표시 */
                       <textarea
                         value={stepAnswers[step.stepNumber] || ""}
                         onChange={(e) =>
@@ -314,6 +314,17 @@ export default function ProblemSolvePage() {
                         rows={3}
                         disabled={submitting}
                       />
+                    ) : !step.options ? (
+                      /* 객관식/OX인데 선택지가 없는 경우 - 에러 표시 */
+                      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                        <p className="text-sm text-orange-800">
+                          ⚠️ 이 문제는 {problem.answerFormat === "MULTIPLE_CHOICE" ? "객관식" : "OX"} 형식이지만 선택지가 없습니다.
+                          <br />
+                          <span className="text-xs text-orange-600">
+                            (이전 버전에서 생성된 문제일 수 있습니다. 새로운 문제를 생성해주세요.)
+                          </span>
+                        </p>
+                      </div>
                     ) : !stepAnswers[step.stepNumber] && (
                       /* 객관식/OX는 선택 전에만 표시 */
                       <>
