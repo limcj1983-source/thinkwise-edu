@@ -1,67 +1,77 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// REST API 직접 호출 방식으로 변경
+// SDK에서 계속 404 에러가 발생하므로 REST API를 직접 사용
 
-// Lazy initialization to avoid build-time errors
-let genAI: GoogleGenerativeAI | null = null;
+export async function generateText(prompt: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
 
-function getGeminiClient() {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not set in environment variables');
   }
 
-  if (!genAI) {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  }
+  // 사용할 모델 (환경변수로 변경 가능)
+  const model = process.env.GEMINI_MODEL || 'gemini-pro';
 
-  return genAI;
-}
+  console.log('Calling Gemini REST API with model:', model);
+  console.log('API Key prefix:', apiKey.substring(0, 10) + '...');
 
-export function getGeminiModel() {
-  // Google Generative AI Node.js SDK에서 사용 가능한 모델명:
-  // SDK는 자동으로 "models/" 접두사를 추가하므로 모델명만 사용
-  //
-  // 시도 순서:
-  // 1. gemini-pro (가장 안정적, 모든 API 버전 지원)
-  // 2. gemini-1.5-flash-latest (최신, 빠름)
-  // 3. gemini-1.5-pro-latest (최신, 정확)
-  const modelName = process.env.GEMINI_MODEL || 'gemini-pro';
-
-  console.log('Using Gemini model:', modelName);
-
-  return getGeminiClient().getGenerativeModel({
-    model: modelName
-  });
-}
-
-export async function generateText(prompt: string): Promise<string> {
   try {
-    console.log('Calling Gemini API...');
-    const model = getGeminiModel();
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // REST API 직접 호출
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error response:', errorText);
+      console.error('Status:', response.status);
+
+      throw new Error(`Gemini API returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // 응답에서 텍스트 추출
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      console.error('Unexpected response format:', JSON.stringify(data));
+      throw new Error('Gemini API returned unexpected response format');
+    }
+
     console.log('Gemini API response received, length:', text.length);
     return text;
+
   } catch (error) {
     console.error('Gemini API error:', error);
 
-    // 더 자세한 에러 메시지
     if (error instanceof Error) {
       console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
 
-      // API 키 관련 에러인 경우
-      if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+      // API 키 관련 에러
+      if (error.message.includes('API key') || error.message.includes('API_KEY') || error.message.includes('401')) {
         throw new Error('Gemini API 키가 유효하지 않습니다. 환경 변수를 확인해주세요.');
       }
 
       // Rate limit 에러
-      if (error.message.includes('quota') || error.message.includes('rate limit')) {
+      if (error.message.includes('quota') || error.message.includes('rate limit') || error.message.includes('429')) {
         throw new Error('Gemini API 할당량을 초과했습니다. 잠시 후 다시 시도해주세요.');
       }
 
       // Model not found 에러
-      if (error.message.includes('not found') || error.message.includes('not supported')) {
-        throw new Error(`모델을 찾을 수 없습니다. 사용 가능한 모델을 확인하세요. 원본 에러: ${error.message}`);
+      if (error.message.includes('404') || error.message.includes('not found')) {
+        throw new Error(`모델 '${model}'을 찾을 수 없습니다. GEMINI_MODEL 환경변수를 확인하세요. 에러: ${error.message}`);
       }
 
       throw new Error(`Gemini API 오류: ${error.message}`);
