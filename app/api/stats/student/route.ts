@@ -27,14 +27,15 @@ export async function GET() {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const recentProgress = await prisma.attempt.groupBy({
-      by: ['createdAt'],
+    const recentProgress = await prisma.attempt.findMany({
       where: {
         userId,
         createdAt: { gte: sevenDaysAgo },
       },
-      _count: { id: true },
-      _sum: { isCorrect: true },
+      select: {
+        createdAt: true,
+        isCorrect: true,
+      },
     });
 
     // 날짜별로 집계
@@ -47,8 +48,8 @@ export async function GET() {
         p.createdAt.toISOString().split('T')[0] === dateStr
       );
 
-      const total = dayAttempts.reduce((sum, p) => sum + p._count.id, 0);
-      const correct = dayAttempts.reduce((sum, p) => sum + (p._sum.isCorrect || 0), 0);
+      const total = dayAttempts.length;
+      const correct = dayAttempts.filter(p => p.isCorrect).length;
 
       return {
         date: dateStr,
