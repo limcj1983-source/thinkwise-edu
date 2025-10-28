@@ -184,7 +184,7 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 통계 */}
-          <Link href="/admin/statistics">
+          <Link href="/admin/stats">
             <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition cursor-pointer border-2 border-transparent hover:border-purple-500">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-3xl mb-4">
                 📊
