@@ -156,7 +156,6 @@ function createProblemDecompositionPrompt(params: {
     6: "창의적 해결책이 필요한 5단계"
   };
 
-  const randomStyle = styleExamples[Math.floor(Math.random() * styleExamples.length)];
   const stepCount = params.difficulty === 'EASY' ? 3 : params.difficulty === 'MEDIUM' ? 4 : 5;
 
   return `당신은 초등학교 ${params.grade}학년 학생들을 위한 교육 콘텐츠를 만드는 베테랑 교사입니다.
