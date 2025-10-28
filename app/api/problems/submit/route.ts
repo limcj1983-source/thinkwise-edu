@@ -50,9 +50,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // 문제 조회
+    // 문제 조회 (단계 포함)
     const problem = await prisma.problem.findUnique({
       where: { id: validatedData.problemId },
+      include: {
+        steps: {
+          orderBy: { stepNumber: 'asc' },
+        },
+      },
     });
 
     if (!problem) {
@@ -62,15 +67,73 @@ export async function POST(request: Request) {
       );
     }
 
-    // AI 기반 채점
-    const gradingResult = await gradeAnswerWithAI(
-      problem.content,
-      problem.correctAnswer,
-      validatedData.answer,
-      problem.answerFormat
-    );
+    let gradingResult;
+    let isCorrect;
+    let stepResults: any[] = [];
 
-    const isCorrect = gradingResult.isCorrect;
+    // 문제 분해 타입이면 단계별 채점
+    if (problem.type === 'PROBLEM_DECOMPOSITION' && problem.steps.length > 0) {
+      try {
+        const stepAnswers = JSON.parse(validatedData.answer);
+
+        // 각 단계별로 AI 채점
+        for (const step of problem.steps) {
+          const userStepAnswer = stepAnswers[step.stepNumber] || '';
+
+          const stepGrading = await gradeAnswerWithAI(
+            `${step.title}\n${step.description}`,
+            step.correctAnswer || '',
+            userStepAnswer,
+            problem.answerFormat
+          );
+
+          stepResults.push({
+            stepNumber: step.stepNumber,
+            title: step.title,
+            userAnswer: userStepAnswer,
+            isCorrect: stepGrading.isCorrect,
+            score: stepGrading.score,
+            feedback: stepGrading.feedback,
+          });
+        }
+
+        // 전체 평균 점수 계산
+        const avgScore = stepResults.reduce((sum, r) => sum + r.score, 0) / stepResults.length;
+        const correctSteps = stepResults.filter(r => r.isCorrect).length;
+
+        isCorrect = avgScore >= 60; // 평균 60점 이상이면 정답
+        gradingResult = {
+          isCorrect,
+          score: Math.round(avgScore),
+          feedback: `${correctSteps}/${stepResults.length} 단계를 정확히 완료했습니다. ${
+            isCorrect
+              ? '문제 분해 능력이 훌륭해요!'
+              : '조금 더 체계적으로 단계를 나눠보세요.'
+          }`,
+          reasoning: '단계별 점수 평균으로 채점',
+        };
+
+      } catch (error) {
+        console.error('Step grading error:', error);
+        // JSON 파싱 실패 시 폴백
+        gradingResult = {
+          isCorrect: false,
+          score: 0,
+          feedback: '답안 형식이 올바르지 않습니다.',
+          reasoning: 'Parse error',
+        };
+        isCorrect = false;
+      }
+    } else {
+      // 일반 문제는 기존 방식으로 채점
+      gradingResult = await gradeAnswerWithAI(
+        problem.content,
+        problem.correctAnswer,
+        validatedData.answer,
+        problem.answerFormat
+      );
+      isCorrect = gradingResult.isCorrect;
+    }
 
     // 답안 제출 기록 (AI 피드백 포함)
     const attempt = await prisma.attempt.create({
@@ -151,6 +214,7 @@ export async function POST(request: Request) {
       message: gradingResult.feedback,
       feedback: gradingResult.feedback,
       reasoning: gradingResult.reasoning,
+      stepResults: stepResults.length > 0 ? stepResults : undefined,
       attemptId: attempt.id,
     });
 

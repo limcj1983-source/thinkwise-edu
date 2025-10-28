@@ -44,6 +44,7 @@ export default function ProblemSolvePage() {
   const [limitReached, setLimitReached] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [score, setScore] = useState(0);
+  const [stepResults, setStepResults] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProblem();
@@ -111,6 +112,7 @@ export default function ProblemSolvePage() {
         setIsCorrect(data.isCorrect);
         setFeedback(data.feedback || data.message);
         setScore(data.score || (data.isCorrect ? 100 : 0));
+        setStepResults(data.stepResults || []);
         setSubmitted(true);
       } else {
         if (data.limitReached) {
@@ -256,25 +258,14 @@ export default function ProblemSolvePage() {
                             <span className="text-green-600 text-sm">✓ 완료</span>
                           )}
                         </div>
-                        <h3 className="font-bold text-gray-900 mb-1">
-                          {step.title}
-                        </h3>
-                        <p className="text-sm text-gray-600">{step.description}</p>
+                        <p className="text-gray-700 font-medium">
+                          이 단계에서 무엇을 해야 할까요?
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          문제를 해결하기 위한 {step.stepNumber}번째 단계를 생각해보세요
+                        </p>
                       </div>
-                      <button
-                        onClick={() => toggleHint(step.stepNumber)}
-                        className="text-sm text-blue-600 hover:text-blue-700 ml-4 whitespace-nowrap"
-                      >
-                        {showHints[step.stepNumber] ? "힌트 숨기기" : "💡 힌트 보기"}
-                      </button>
                     </div>
-
-                    {/* 힌트 */}
-                    {showHints[step.stepNumber] && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-gray-700">
-                        💡 {step.hint}
-                      </div>
-                    )}
 
                     {/* 선택한 답변 표시 */}
                     {stepAnswers[step.stepNumber] && problem.answerFormat !== "SHORT_ANSWER" && (
@@ -499,8 +490,8 @@ export default function ProblemSolvePage() {
               )}
             </div>
 
-            {/* AI 피드백 (주관식일 때) */}
-            {problem.answerFormat === "SHORT_ANSWER" && feedback && (
+            {/* AI 피드백 */}
+            {feedback && (
               <div className={`border-l-4 p-4 rounded mb-6 ${
                 isCorrect
                   ? "bg-green-50 border-green-500"
@@ -516,11 +507,90 @@ export default function ProblemSolvePage() {
               </div>
             )}
 
+            {/* 단계별 채점 결과 (문제 분해일 때) */}
+            {stepResults.length > 0 && (
+              <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded mb-6">
+                <h3 className="font-bold text-gray-900 mb-4">📝 단계별 채점 결과</h3>
+                <div className="space-y-3">
+                  {stepResults.map((result: any) => (
+                    <div
+                      key={result.stepNumber}
+                      className={`p-4 rounded-lg border-2 ${
+                        result.isCorrect
+                          ? "bg-green-50 border-green-300"
+                          : result.score >= 60
+                          ? "bg-blue-50 border-blue-300"
+                          : "bg-orange-50 border-orange-300"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-700">
+                            단계 {result.stepNumber}
+                          </span>
+                          <span
+                            className={`text-sm font-semibold ${
+                              result.isCorrect
+                                ? "text-green-600"
+                                : result.score >= 60
+                                ? "text-blue-600"
+                                : "text-orange-600"
+                            }`}
+                          >
+                            {result.score}점
+                          </span>
+                        </div>
+                        <span className="text-2xl">
+                          {result.isCorrect ? "✅" : result.score >= 60 ? "🔵" : "⚠️"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-800 mb-2">
+                        <span className="font-semibold">당신의 답변: </span>
+                        {result.userAnswer}
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-semibold">피드백: </span>
+                        {result.feedback}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-6">
               <h3 className="font-bold text-gray-900 mb-2">✅ 정답 및 해설</h3>
               <p className="text-gray-800 mb-3">{problem.correctAnswer}</p>
               <p className="text-gray-700 text-sm">{problem.explanation}</p>
             </div>
+
+            {/* 문제 분해 모범 단계 */}
+            {problem.type === "PROBLEM_DECOMPOSITION" && problem.steps && (
+              <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded mb-6">
+                <h3 className="font-bold text-gray-900 mb-4">📋 모범 단계별 해결 과정</h3>
+                <div className="space-y-4">
+                  {problem.steps.map((step) => (
+                    <div key={step.id} className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                          {step.stepNumber}
+                        </span>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-gray-900 mb-1">{step.title}</h4>
+                          <p className="text-sm text-gray-700 mb-2">{step.description}</p>
+                          {step.correctAnswer && (
+                            <div className="bg-green-50 border border-green-200 rounded px-3 py-2 text-sm">
+                              <span className="font-semibold text-green-700">모범 답안: </span>
+                              <span className="text-gray-800">{step.correctAnswer}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-4">
               <Link
