@@ -293,9 +293,13 @@ function cleanJSONResponse(text: string): string {
   return cleaned;
 }
 
+// AnswerFormat 타입 추가
+type AnswerFormat = 'SHORT_ANSWER' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+
 // AI 문제 생성 함수
 async function generateProblemWithAI(params: {
   type: ProblemType;
+  answerFormat: AnswerFormat;
   difficulty: Difficulty;
   grade: number;
   subject?: string;
@@ -303,39 +307,58 @@ async function generateProblemWithAI(params: {
 }): Promise<any> {
   const language = params.language || 'ko';
 
-  // 주제가 없으면 랜덤 선택
+  // 주제가 없으면 랜덤 선택 (문제 카테고리에 따라)
   const subjects = params.subject
     ? [params.subject]
     : params.type === 'AI_VERIFICATION'
     ? (language === 'en'
         ? ['Animals', 'Plants', 'Space', 'History', 'Science', 'Geography', 'Environment', 'Health', 'Technology', 'Culture']
         : ['동물', '식물', '우주', '역사', '과학', '지리', '환경', '건강', '기술', '문화'])
-    : params.type === 'PROBLEM_DECOMPOSITION'
-    ? (language === 'en'
-        ? ['School Life', 'Friendship', 'Family Trip', 'Money Management', 'Time Management', 'Homework Planning', 'Club Activities', 'Volunteer Work']
-        : ['학교생활', '친구관계', '가족여행', '용돈관리', '시간관리', '숙제계획', '동아리활동', '봉사활동'])
-    : params.type === 'MULTIPLE_CHOICE'
-    ? (language === 'en'
-        ? ['Math', 'Science', 'History', 'Geography', 'Language', 'Arts', 'Music', 'Physical Education']
-        : ['수학', '과학', '역사', '지리', '국어', '미술', '음악', '체육'])
     : (language === 'en'
-        ? ['Science Facts', 'Math Concepts', 'History Events', 'Geography', 'Language Rules', 'Common Knowledge']
-        : ['과학 상식', '수학 개념', '역사 사실', '지리', '언어 규칙', '일반 상식']);
+        ? ['School Life', 'Friendship', 'Family Trip', 'Money Management', 'Time Management', 'Homework Planning', 'Club Activities', 'Volunteer Work']
+        : ['학교생활', '친구관계', '가족여행', '용돈관리', '시간관리', '숙제계획', '동아리활동', '봉사활동']);
 
   const subject = params.subject || subjects[Math.floor(Math.random() * subjects.length)];
 
-  // 프롬프트 생성
+  // 프롬프트 생성: 문제 카테고리 + 답변 형식 조합
   let prompt: string;
+
+  // 먼저 기본 문제 프롬프트를 가져옴
+  let basePrompt: string;
   if (params.type === 'AI_VERIFICATION') {
-    prompt = createAIVerificationPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
-  } else if (params.type === 'PROBLEM_DECOMPOSITION') {
-    prompt = createProblemDecompositionPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
-  } else if (params.type === 'MULTIPLE_CHOICE') {
-    prompt = createMultipleChoicePrompt({ grade: params.grade, difficulty: params.difficulty, subject, language });
-  } else if (params.type === 'TRUE_FALSE') {
-    prompt = createTrueFalsePrompt({ grade: params.grade, difficulty: params.difficulty, subject, language });
+    basePrompt = createAIVerificationPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
   } else {
-    throw new Error(`Unsupported problem type: ${params.type}`);
+    basePrompt = createProblemDecompositionPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
+  }
+
+  // 답변 형식에 따라 프롬프트 수정
+  if (params.answerFormat === 'MULTIPLE_CHOICE') {
+    // 객관식: 기본 프롬프트에 객관식 형식 요구사항 추가
+    prompt = basePrompt.replace(
+      '**다음 JSON 형식으로만 응답하세요**:',
+      '**답변 형식**: 4지선다 객관식 (A, B, C, D)\n\n**다음 JSON 형식으로만 응답하세요**:'
+    ).replace(
+      '"correctAnswer": "찾아야 할 오류를 구체적으로 설명',
+      '"options": ["선택지 A 내용 (30-80자)", "선택지 B 내용", "선택지 C 내용", "선택지 D 내용"],\n  "correctAnswer": "A, B, C, D 중 정답 (예: \\"A\\")'
+    ).replace(
+      '"correctAnswer": "문제 해결의 핵심 접근 방법 요약',
+      '"options": ["선택지 A 내용 (30-80자)", "선택지 B 내용", "선택지 C 내용", "선택지 D 내용"],\n  "correctAnswer": "A, B, C, D 중 정답 (예: \\"A\\")'
+    );
+  } else if (params.answerFormat === 'TRUE_FALSE') {
+    // OX 퀴즈: 기본 프롬프트에 참/거짓 형식 요구사항 추가
+    prompt = basePrompt.replace(
+      '**다음 JSON 형식으로만 응답하세요**:',
+      '**답변 형식**: OX 퀴즈 (참 또는 거짓)\n\n**다음 JSON 형식으로만 응답하세요**:'
+    ).replace(
+      '"correctAnswer": "찾아야 할 오류를 구체적으로 설명',
+      '"correctAnswer": "O 또는 X"'
+    ).replace(
+      '"correctAnswer": "문제 해결의 핵심 접근 방법 요약',
+      '"correctAnswer": "O 또는 X"'
+    );
+  } else {
+    // 주관식: 기본 프롬프트 그대로 사용
+    prompt = basePrompt;
   }
 
   // Gemini API 호출
@@ -362,9 +385,9 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    const { type, difficulty, grade, subject, count, language } = body;
+    const { type, answerFormat, difficulty, grade, subject, count, language } = body;
 
-    if (!type || !difficulty || !grade || !count) {
+    if (!type || !answerFormat || !difficulty || !grade || !count) {
       return NextResponse.json(
         { error: '필수 항목이 누락되었습니다' },
         { status: 400 }
@@ -387,7 +410,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('Starting AI problem generation:', { type, difficulty, grade, subject, count });
+    console.log('Starting AI problem generation:', { type, answerFormat, difficulty, grade, subject, count });
 
     const createdProblems = [];
     const failedProblems = [];
@@ -398,6 +421,7 @@ export async function POST(request: Request) {
         // AI로 문제 생성
         const generated = await generateProblemWithAI({
           type,
+          answerFormat,
           difficulty,
           grade,
           subject,
@@ -408,6 +432,7 @@ export async function POST(request: Request) {
         const problem = await prisma.problem.create({
           data: {
             type,
+            answerFormat, // 답변 형식 추가
             difficulty,
             title: generated.title,
             content: generated.content,

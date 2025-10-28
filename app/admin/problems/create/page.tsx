@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type ProblemType = "AI_VERIFICATION" | "PROBLEM_DECOMPOSITION" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
+type ProblemType = "AI_VERIFICATION" | "PROBLEM_DECOMPOSITION";
+type AnswerFormat = "SHORT_ANSWER" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
 
 interface ProblemStep {
@@ -22,6 +23,7 @@ export default function CreateProblemPage() {
   // 수동 입력 폼 상태
   const [formData, setFormData] = useState({
     type: "AI_VERIFICATION" as ProblemType,
+    answerFormat: "SHORT_ANSWER" as AnswerFormat,
     difficulty: "MEDIUM" as Difficulty,
     title: "",
     content: "",
@@ -29,6 +31,7 @@ export default function CreateProblemPage() {
     explanation: "",
     subject: "",
     grade: 3,
+    options: [] as string[], // 객관식 선택지
   });
 
   const [steps, setSteps] = useState<ProblemStep[]>([]);
@@ -36,6 +39,7 @@ export default function CreateProblemPage() {
   // AI 생성 폼 상태
   const [aiFormData, setAiFormData] = useState({
     type: "AI_VERIFICATION" as ProblemType,
+    answerFormat: "SHORT_ANSWER" as AnswerFormat,
     difficulty: "MEDIUM" as Difficulty,
     subject: "",
     grade: 3,
@@ -53,6 +57,7 @@ export default function CreateProblemPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          options: formData.answerFormat === "MULTIPLE_CHOICE" ? formData.options : null,
           steps: formData.type === "PROBLEM_DECOMPOSITION" ? steps : undefined,
         }),
       });
@@ -190,24 +195,48 @@ export default function CreateProblemPage() {
           <div className="bg-white rounded-xl shadow-lg p-8">
             <form onSubmit={handleManualSubmit}>
               <div className="space-y-6">
-                {/* 문제 유형 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    문제 유형 *
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value as ProblemType })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="AI_VERIFICATION">AI 정보 검증 (주관식)</option>
-                    <option value="PROBLEM_DECOMPOSITION">문제 분해 (주관식)</option>
-                    <option value="MULTIPLE_CHOICE">객관식 (4지선다)</option>
-                    <option value="TRUE_FALSE">OX 퀴즈</option>
-                  </select>
+                {/* 문제 카테고리 & 답변 형식 */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      문제 카테고리 *
+                    </label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) =>
+                        setFormData({ ...formData, type: e.target.value as ProblemType })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="AI_VERIFICATION">🔍 AI 정보 검증</option>
+                      <option value="PROBLEM_DECOMPOSITION">🧩 문제 분해</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      문제의 주제/내용 유형을 선택하세요
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      답변 형식 *
+                    </label>
+                    <select
+                      value={formData.answerFormat}
+                      onChange={(e) =>
+                        setFormData({ ...formData, answerFormat: e.target.value as AnswerFormat })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="SHORT_ANSWER">✍️ 주관식 (서술형)</option>
+                      <option value="MULTIPLE_CHOICE">📝 객관식 (4지선다)</option>
+                      <option value="TRUE_FALSE">⭕ OX 퀴즈 (참/거짓)</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      학생이 답변하는 방식을 선택하세요
+                    </p>
+                  </div>
                 </div>
 
                 {/* 난이도 & 학년 */}
@@ -296,21 +325,79 @@ export default function CreateProblemPage() {
                   />
                 </div>
 
+                {/* 객관식 선택지 (MULTIPLE_CHOICE인 경우만) */}
+                {formData.answerFormat === "MULTIPLE_CHOICE" && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      객관식 선택지 (4개) *
+                    </label>
+                    <div className="space-y-2">
+                      {["A", "B", "C", "D"].map((label, index) => (
+                        <div key={label} className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700 w-8">{label}.</span>
+                          <input
+                            type="text"
+                            value={formData.options[index] || ""}
+                            onChange={(e) => {
+                              const newOptions = [...formData.options];
+                              newOptions[index] = e.target.value;
+                              setFormData({ ...formData, options: newOptions });
+                            }}
+                            placeholder={`선택지 ${label} 내용`}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* 정답 */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     정답 *
                   </label>
-                  <textarea
-                    value={formData.correctAnswer}
-                    onChange={(e) =>
-                      setFormData({ ...formData, correctAnswer: e.target.value })
-                    }
-                    placeholder="키워드 중심으로 작성 (자동 채점에 사용됨)"
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
+                  {formData.answerFormat === "MULTIPLE_CHOICE" ? (
+                    <select
+                      value={formData.correctAnswer}
+                      onChange={(e) =>
+                        setFormData({ ...formData, correctAnswer: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">정답 선택</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
+                  ) : formData.answerFormat === "TRUE_FALSE" ? (
+                    <select
+                      value={formData.correctAnswer}
+                      onChange={(e) =>
+                        setFormData({ ...formData, correctAnswer: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">정답 선택</option>
+                      <option value="O">O (참)</option>
+                      <option value="X">X (거짓)</option>
+                    </select>
+                  ) : (
+                    <textarea
+                      value={formData.correctAnswer}
+                      onChange={(e) =>
+                        setFormData({ ...formData, correctAnswer: e.target.value })
+                      }
+                      placeholder="키워드 중심으로 작성 (자동 채점에 사용됨)"
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  )}
                 </div>
 
                 {/* 해설 */}
@@ -429,10 +516,10 @@ export default function CreateProblemPage() {
 
             <form onSubmit={handleAIGenerate}>
               <div className="space-y-6">
-                {/* 문제 유형 */}
+                {/* 문제 카테고리 */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    문제 유형 *
+                    문제 카테고리 *
                   </label>
                   <select
                     value={aiFormData.type}
@@ -442,11 +529,34 @@ export default function CreateProblemPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     required
                   >
-                    <option value="AI_VERIFICATION">AI 정보 검증 (주관식)</option>
-                    <option value="PROBLEM_DECOMPOSITION">문제 분해 (주관식)</option>
-                    <option value="MULTIPLE_CHOICE">객관식 (4지선다)</option>
-                    <option value="TRUE_FALSE">OX 퀴즈</option>
+                    <option value="AI_VERIFICATION">AI 정보 검증</option>
+                    <option value="PROBLEM_DECOMPOSITION">문제 분해</option>
                   </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    문제의 주제와 내용 유형을 선택하세요
+                  </p>
+                </div>
+
+                {/* 답변 형식 */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    답변 형식 *
+                  </label>
+                  <select
+                    value={aiFormData.answerFormat}
+                    onChange={(e) =>
+                      setAiFormData({ ...aiFormData, answerFormat: e.target.value as AnswerFormat })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    required
+                  >
+                    <option value="SHORT_ANSWER">주관식 (서술형)</option>
+                    <option value="MULTIPLE_CHOICE">객관식 (4지선다)</option>
+                    <option value="TRUE_FALSE">OX 퀴즈 (참/거짓)</option>
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    학생이 답변하는 방식을 선택하세요
+                  </p>
                 </div>
 
                 {/* 난이도 & 학년 */}
@@ -546,17 +656,30 @@ export default function CreateProblemPage() {
 
                 {/* 안내 메시지 */}
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <p className="text-sm text-purple-800 mb-2">
-                    💡 <strong>문제 유형 설명:</strong>
+                  <div className="mb-3">
+                    <p className="text-sm text-purple-800 font-semibold mb-2">
+                      💡 <strong>문제 카테고리:</strong>
+                    </p>
+                    <ul className="text-sm text-purple-800 space-y-1 ml-4 list-disc">
+                      <li><strong>AI 정보 검증:</strong> AI가 제공한 정보에서 오류 찾기</li>
+                      <li><strong>문제 분해:</strong> 복잡한 문제를 단계별로 해결하기</li>
+                    </ul>
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-sm text-purple-800 font-semibold mb-2">
+                      📝 <strong>답변 형식:</strong>
+                    </p>
+                    <ul className="text-sm text-purple-800 space-y-1 ml-4 list-disc">
+                      <li><strong>주관식:</strong> 학생이 직접 답을 서술</li>
+                      <li><strong>객관식:</strong> 4개 선택지 중 정답 선택</li>
+                      <li><strong>OX:</strong> 참/거짓 판단</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-purple-800">
+                    ✨ 예: "AI 정보 검증 + 객관식" = AI가 제공한 정보를 객관식으로 판단
                   </p>
-                  <ul className="text-sm text-purple-800 space-y-1 ml-4 list-disc">
-                    <li><strong>AI 정보 검증:</strong> AI가 제공한 정보의 오류 찾기 (주관식)</li>
-                    <li><strong>문제 분해:</strong> 복잡한 문제를 단계별로 해결하기 (주관식)</li>
-                    <li><strong>객관식:</strong> 4개의 선택지 중 정답 고르기</li>
-                    <li><strong>OX 퀴즈:</strong> 진술의 참/거짓 판단하기</li>
-                  </ul>
-                  <p className="text-sm text-purple-800 mt-3">
-                    📝 생성된 문제는 자동으로 "검토 대기" 상태가 되며, 관리자 검토 후 활성화됩니다.
+                  <p className="text-sm text-purple-800 mt-2">
+                    📋 생성된 문제는 자동으로 "검토 대기" 상태가 되며, 관리자 검토 후 활성화됩니다.
                   </p>
                 </div>
 

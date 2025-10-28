@@ -9,12 +9,13 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    const { type, difficulty, title, content, correctAnswer, explanation, subject, grade, steps } = body;
+    const { type, answerFormat, difficulty, title, content, correctAnswer, explanation, subject, grade, options, steps } = body;
 
     // 문제 생성
     const problem = await prisma.problem.create({
       data: {
         type,
+        answerFormat: answerFormat || 'SHORT_ANSWER', // 기본값은 주관식
         difficulty,
         title,
         content,
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
         explanation,
         subject,
         grade,
+        options: options || null, // 객관식 선택지
         generatedBy: 'TEACHER',
         reviewed: true, // 교사가 직접 입력한 문제는 바로 승인
         active: true,

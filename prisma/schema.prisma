@@ -41,12 +41,17 @@ enum Subscription {
   PREMIUM // 유료: 무제한 + 상세 분석
 }
 
-// 문제 유형
+// 문제 카테고리
 enum ProblemType {
-  AI_VERIFICATION       // AI 정보 검증 (주관식)
-  PROBLEM_DECOMPOSITION // 문제 분해 (주관식)
-  MULTIPLE_CHOICE       // 객관식
-  TRUE_FALSE            // OX 퀴즈
+  AI_VERIFICATION       // AI 정보 검증
+  PROBLEM_DECOMPOSITION // 문제 분해
+}
+
+// 답변 형식
+enum AnswerFormat {
+  SHORT_ANSWER    // 주관식
+  MULTIPLE_CHOICE // 객관식 (4지선다)
+  TRUE_FALSE      // OX 퀴즈
 }
 
 // 난이도
@@ -58,8 +63,9 @@ enum Difficulty {
 
 // 문제
 model Problem {
-  id            String      @id @default(cuid())
-  type          ProblemType
+  id            String       @id @default(cuid())
+  type          ProblemType  // 문제 카테고리 (AI 검증, 문제 분해)
+  answerFormat  AnswerFormat @default(SHORT_ANSWER) // 답변 형식 (주관식, 객관식, OX)
   difficulty    Difficulty
   title         String
   content       String      // 문제 내용
@@ -68,7 +74,7 @@ model Problem {
   subject       String      // 주제 (과학, 사회, 수학 등)
   grade         Int         // 대상 학년
 
-  // 객관식/OX 관련
+  // 객관식 관련
   options       Json?       // 객관식 선택지 배열: ["A", "B", "C", "D"]
 
   // 다국어 지원
