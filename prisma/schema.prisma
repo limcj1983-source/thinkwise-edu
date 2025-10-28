@@ -41,10 +41,12 @@ enum Subscription {
   PREMIUM // 유료: 무제한 + 상세 분석
 }
 
-// 문제 카테고리
+// 문제 카테고리 (마이그레이션 중: 임시로 MULTIPLE_CHOICE, TRUE_FALSE 포함)
 enum ProblemType {
   AI_VERIFICATION       // AI 정보 검증
   PROBLEM_DECOMPOSITION // 문제 분해
+  MULTIPLE_CHOICE       // 임시: 마이그레이션 후 제거 예정
+  TRUE_FALSE            // 임시: 마이그레이션 후 제거 예정
 }
 
 // 답변 형식
