@@ -16,12 +16,13 @@ function getGeminiClient() {
 }
 
 export function getGeminiModel() {
-  // 환경변수로 모델 지정 가능
-  // 시도할 모델 순서:
-  // 1. gemini-1.5-flash (가장 최신, 빠름)
-  // 2. gemini-1.5-pro (더 정확)
-  // 3. gemini-pro (안정적)
-  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  // v1beta API에서 확인된 작동 모델:
+  // - gemini-1.5-flash-001 (명시적 버전)
+  // - gemini-1.5-pro-001 (명시적 버전)
+  // - gemini-1.0-pro (이전 버전, 안정적)
+  //
+  // 참고: /api/test-gemini 에서 사용 가능한 모델 확인 가능
+  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-001';
 
   console.log('Using Gemini model:', modelName);
 
