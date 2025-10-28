@@ -195,9 +195,16 @@ function cleanJSONResponse(text: string): string {
 
 // AI를 사용하여 문제 생성
 async function generateProblem(params: ProblemGenerationParams): Promise<GeneratedProblem> {
-  const prompt = params.type === 'AI_VERIFICATION'
-    ? createAIVerificationPrompt(params)
-    : createProblemDecompositionPrompt(params);
+  let prompt: string;
+
+  if (params.type === 'AI_VERIFICATION') {
+    prompt = createAIVerificationPrompt(params);
+  } else if (params.type === 'PROBLEM_DECOMPOSITION') {
+    prompt = createProblemDecompositionPrompt(params);
+  } else {
+    // MULTIPLE_CHOICE, TRUE_FALSE는 웹 UI에서만 사용
+    throw new Error(`This script only supports AI_VERIFICATION and PROBLEM_DECOMPOSITION. Use the web UI for ${params.type}.`);
+  }
 
   console.log(`📝 Generating ${params.type} problem for grade ${params.grade}...`);
 
@@ -272,6 +279,14 @@ const SUBJECTS = {
   PROBLEM_DECOMPOSITION: [
     '학교생활', '친구관계', '가족여행', '용돈관리', '시간관리',
     '숙제계획', '동아리활동', '봉사활동', '생일파티', '운동회'
+  ],
+  MULTIPLE_CHOICE: [
+    '수학', '과학', '역사', '지리', '국어', '미술', '음악', '체육',
+    '사회', '도덕', '영어', '컴퓨터'
+  ],
+  TRUE_FALSE: [
+    '과학 상식', '수학 개념', '역사 사실', '지리', '언어 규칙',
+    '일반 상식', '건강', '안전', '환경', '사회'
   ],
 };
 
