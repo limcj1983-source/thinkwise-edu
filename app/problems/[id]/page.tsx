@@ -299,8 +299,8 @@ export default function ProblemSolvePage() {
                     )}
 
                     {/* 답변 입력 UI */}
-                    {problem.answerFormat === "SHORT_ANSWER" ? (
-                      /* 주관식은 항상 표시 */
+                    {problem.answerFormat === "SHORT_ANSWER" || !step.options ? (
+                      /* 주관식 또는 선택지가 없는 경우 - 항상 표시 */
                       <textarea
                         value={stepAnswers[step.stepNumber] || ""}
                         onChange={(e) =>
