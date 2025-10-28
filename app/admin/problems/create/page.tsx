@@ -203,8 +203,10 @@ export default function CreateProblemPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
-                    <option value="AI_VERIFICATION">AI 정보 검증</option>
-                    <option value="PROBLEM_DECOMPOSITION">문제 분해</option>
+                    <option value="AI_VERIFICATION">AI 정보 검증 (주관식)</option>
+                    <option value="PROBLEM_DECOMPOSITION">문제 분해 (주관식)</option>
+                    <option value="MULTIPLE_CHOICE">객관식 (4지선다)</option>
+                    <option value="TRUE_FALSE">OX 퀴즈</option>
                   </select>
                 </div>
 
