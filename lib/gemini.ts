@@ -16,13 +16,14 @@ function getGeminiClient() {
 }
 
 export function getGeminiModel() {
-  // v1beta API에서 확인된 작동 모델:
-  // - gemini-1.0-pro (가장 안정적, 레거시)
-  // - gemini-1.5-flash-001 (명시적 버전, 빠름)
-  // - gemini-1.5-pro-001 (명시적 버전, 정확)
+  // Google Generative AI Node.js SDK에서 사용 가능한 모델명:
+  // SDK는 자동으로 "models/" 접두사를 추가하므로 모델명만 사용
   //
-  // 참고: /api/test-gemini 에서 사용 가능한 모델 확인 가능
-  const modelName = process.env.GEMINI_MODEL || 'gemini-1.0-pro';
+  // 시도 순서:
+  // 1. gemini-pro (가장 안정적, 모든 API 버전 지원)
+  // 2. gemini-1.5-flash-latest (최신, 빠름)
+  // 3. gemini-1.5-pro-latest (최신, 정확)
+  const modelName = process.env.GEMINI_MODEL || 'gemini-pro';
 
   console.log('Using Gemini model:', modelName);
 
