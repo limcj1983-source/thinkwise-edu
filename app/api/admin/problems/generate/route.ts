@@ -160,6 +160,132 @@ ${randomStyle.example}
 - JSON만 응답하고 다른 설명이나 마크다운은 포함하지 마세요`;
 }
 
+// 객관식 문제 생성 프롬프트
+function createMultipleChoicePrompt(params: {
+  grade: number;
+  difficulty: Difficulty;
+  subject: string;
+  language: string;
+}): string {
+  const isEnglish = params.language === 'en';
+
+  if (isEnglish) {
+    return `You are an experienced teacher creating educational content for elementary grade ${params.grade} students.
+
+**Goal**: Create a multiple-choice question that tests critical thinking and knowledge.
+
+**Grade Level**: Grade ${params.grade}
+**Difficulty**: ${params.difficulty === 'EASY' ? 'Easy' : params.difficulty === 'MEDIUM' ? 'Medium' : 'Hard'}
+**Subject**: ${params.subject}
+
+**Requirements**:
+1. Create a clear, age-appropriate question
+2. Provide 4 answer choices (A, B, C, D)
+3. Only ONE correct answer
+4. Make incorrect options plausible but clearly wrong
+5. Question should be 100-200 characters
+6. Each option should be 30-80 characters
+
+**Respond ONLY with this JSON format**:
+{
+  "title": "Question title (max 50 chars)",
+  "content": "The question text asking what students need to determine",
+  "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+  "correctAnswer": "A" or "B" or "C" or "D",
+  "explanation": "Why this answer is correct and others are wrong (max 200 chars)"
+}
+
+**Important**: Return ONLY valid JSON, no markdown or explanations.`;
+  }
+
+  return `당신은 초등학교 ${params.grade}학년 학생들을 위한 교육 콘텐츠를 만드는 베테랑 교사입니다.
+
+**목표**: 비판적 사고력과 지식을 테스트하는 객관식 문제를 만들어주세요.
+
+**학년 수준**: ${params.grade}학년
+**난이도**: ${params.difficulty === 'EASY' ? '쉬움' : params.difficulty === 'MEDIUM' ? '보통' : '어려움'}
+**주제**: ${params.subject}
+
+**핵심 요구사항**:
+1. 명확하고 학년 수준에 맞는 질문 작성
+2. 4개의 선택지 제공 (A, B, C, D)
+3. 정답은 1개만
+4. 오답은 그럴듯하지만 명확히 틀린 내용
+5. 질문은 100-200자
+6. 각 선택지는 30-80자
+
+**다음 JSON 형식으로만 응답하세요**:
+{
+  "title": "문제 제목 (50자 이내)",
+  "content": "학생들이 판단해야 할 내용을 묻는 질문 본문",
+  "options": ["선택지 A 내용", "선택지 B 내용", "선택지 C 내용", "선택지 D 내용"],
+  "correctAnswer": "A" 또는 "B" 또는 "C" 또는 "D",
+  "explanation": "왜 이 답이 정답이고 다른 것들은 오답인지 설명 (200자 이내)"
+}
+
+**중요**: JSON만 응답하고 다른 설명이나 마크다운은 포함하지 마세요.`;
+}
+
+// OX 퀴즈 생성 프롬프트
+function createTrueFalsePrompt(params: {
+  grade: number;
+  difficulty: Difficulty;
+  subject: string;
+  language: string;
+}): string {
+  const isEnglish = params.language === 'en';
+
+  if (isEnglish) {
+    return `You are an experienced teacher creating educational content for elementary grade ${params.grade} students.
+
+**Goal**: Create a True/False question that tests knowledge and critical thinking.
+
+**Grade Level**: Grade ${params.grade}
+**Difficulty**: ${params.difficulty === 'EASY' ? 'Easy' : params.difficulty === 'MEDIUM' ? 'Medium' : 'Hard'}
+**Subject**: ${params.subject}
+
+**Requirements**:
+1. Create a clear statement that is definitely true or false
+2. Statement should be 100-250 characters
+3. Avoid ambiguous statements
+4. Test actual knowledge, not trick questions
+
+**Respond ONLY with this JSON format**:
+{
+  "title": "Question title (max 50 chars)",
+  "content": "A clear statement that is either true or false",
+  "correctAnswer": "True" or "False",
+  "explanation": "Why the statement is true/false with accurate information (max 200 chars)"
+}
+
+**Important**: Return ONLY valid JSON, no markdown or explanations.`;
+  }
+
+  return `당신은 초등학교 ${params.grade}학년 학생들을 위한 교육 콘텐츠를 만드는 베테랑 교사입니다.
+
+**목표**: 지식과 비판적 사고력을 테스트하는 OX 퀴즈를 만들어주세요.
+
+**학년 수준**: ${params.grade}학년
+**난이도**: ${params.difficulty === 'EASY' ? '쉬움' : params.difficulty === 'MEDIUM' ? '보통' : '어려움'}
+**주제**: ${params.subject}
+
+**핵심 요구사항**:
+1. 명확하게 참 또는 거짓으로 판단할 수 있는 진술 작성
+2. 진술은 100-250자
+3. 애매한 표현 피하기
+4. 실제 지식을 테스트하는 문제 (트릭 문제 X)
+
+**다음 JSON 형식으로만 응답하세요**:
+{
+  "title": "문제 제목 (50자 이내)",
+  "content": "참 또는 거짓으로 판단해야 할 명확한 진술",
+  "correctAnswer": "O" 또는 "X",
+  "explanation": "왜 이 진술이 참/거짓인지 정확한 정보와 함께 설명 (200자 이내)"
+}
+
+**중요**: JSON만 응답하고 다른 설명이나 마크다운은 포함하지 마세요.`;
+}
+
 // JSON 응답 정리
 function cleanJSONResponse(text: string): string {
   let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
@@ -173,20 +299,44 @@ async function generateProblemWithAI(params: {
   difficulty: Difficulty;
   grade: number;
   subject?: string;
+  language?: string;
 }): Promise<any> {
+  const language = params.language || 'ko';
+
   // 주제가 없으면 랜덤 선택
   const subjects = params.subject
     ? [params.subject]
     : params.type === 'AI_VERIFICATION'
-    ? ['동물', '식물', '우주', '역사', '과학', '지리', '환경', '건강', '기술', '문화']
-    : ['학교생활', '친구관계', '가족여행', '용돈관리', '시간관리', '숙제계획', '동아리활동', '봉사활동'];
+    ? (language === 'en'
+        ? ['Animals', 'Plants', 'Space', 'History', 'Science', 'Geography', 'Environment', 'Health', 'Technology', 'Culture']
+        : ['동물', '식물', '우주', '역사', '과학', '지리', '환경', '건강', '기술', '문화'])
+    : params.type === 'PROBLEM_DECOMPOSITION'
+    ? (language === 'en'
+        ? ['School Life', 'Friendship', 'Family Trip', 'Money Management', 'Time Management', 'Homework Planning', 'Club Activities', 'Volunteer Work']
+        : ['학교생활', '친구관계', '가족여행', '용돈관리', '시간관리', '숙제계획', '동아리활동', '봉사활동'])
+    : params.type === 'MULTIPLE_CHOICE'
+    ? (language === 'en'
+        ? ['Math', 'Science', 'History', 'Geography', 'Language', 'Arts', 'Music', 'Physical Education']
+        : ['수학', '과학', '역사', '지리', '국어', '미술', '음악', '체육'])
+    : (language === 'en'
+        ? ['Science Facts', 'Math Concepts', 'History Events', 'Geography', 'Language Rules', 'Common Knowledge']
+        : ['과학 상식', '수학 개념', '역사 사실', '지리', '언어 규칙', '일반 상식']);
 
   const subject = params.subject || subjects[Math.floor(Math.random() * subjects.length)];
 
   // 프롬프트 생성
-  const prompt = params.type === 'AI_VERIFICATION'
-    ? createAIVerificationPrompt({ grade: params.grade, difficulty: params.difficulty, subject })
-    : createProblemDecompositionPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
+  let prompt: string;
+  if (params.type === 'AI_VERIFICATION') {
+    prompt = createAIVerificationPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
+  } else if (params.type === 'PROBLEM_DECOMPOSITION') {
+    prompt = createProblemDecompositionPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
+  } else if (params.type === 'MULTIPLE_CHOICE') {
+    prompt = createMultipleChoicePrompt({ grade: params.grade, difficulty: params.difficulty, subject, language });
+  } else if (params.type === 'TRUE_FALSE') {
+    prompt = createTrueFalsePrompt({ grade: params.grade, difficulty: params.difficulty, subject, language });
+  } else {
+    throw new Error(`Unsupported problem type: ${params.type}`);
+  }
 
   // Gemini API 호출
   const response = await generateText(prompt);
@@ -197,6 +347,7 @@ async function generateProblemWithAI(params: {
     return {
       ...problem,
       subject,
+      language,
     };
   } catch (error) {
     console.error('Failed to parse AI response:', cleanedResponse);
@@ -211,7 +362,7 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    const { type, difficulty, grade, subject, count } = body;
+    const { type, difficulty, grade, subject, count, language } = body;
 
     if (!type || !difficulty || !grade || !count) {
       return NextResponse.json(
@@ -250,6 +401,7 @@ export async function POST(request: Request) {
           difficulty,
           grade,
           subject,
+          language: language || 'ko',
         });
 
         // 데이터베이스에 저장
@@ -263,6 +415,8 @@ export async function POST(request: Request) {
             explanation: generated.explanation,
             subject: generated.subject,
             grade,
+            options: generated.options || null, // 객관식 선택지
+            language: generated.language || 'ko', // 언어
             generatedBy: 'AI',
             aiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
             reviewed: false, // AI 생성 문제는 검토 필요

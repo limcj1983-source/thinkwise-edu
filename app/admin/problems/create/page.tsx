@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type ProblemType = "AI_VERIFICATION" | "PROBLEM_DECOMPOSITION";
+type ProblemType = "AI_VERIFICATION" | "PROBLEM_DECOMPOSITION" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
 
 interface ProblemStep {
@@ -40,6 +40,7 @@ export default function CreateProblemPage() {
     subject: "",
     grade: 3,
     count: 1,
+    language: "ko",
   });
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -439,8 +440,10 @@ export default function CreateProblemPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     required
                   >
-                    <option value="AI_VERIFICATION">AI 정보 검증</option>
-                    <option value="PROBLEM_DECOMPOSITION">문제 분해</option>
+                    <option value="AI_VERIFICATION">AI 정보 검증 (주관식)</option>
+                    <option value="PROBLEM_DECOMPOSITION">문제 분해 (주관식)</option>
+                    <option value="MULTIPLE_CHOICE">객관식 (4지선다)</option>
+                    <option value="TRUE_FALSE">OX 퀴즈</option>
                   </select>
                 </div>
 
@@ -499,6 +502,27 @@ export default function CreateProblemPage() {
                   />
                 </div>
 
+                {/* 언어 선택 */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    언어 선택 *
+                  </label>
+                  <select
+                    value={aiFormData.language}
+                    onChange={(e) =>
+                      setAiFormData({ ...aiFormData, language: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    required
+                  >
+                    <option value="ko">🇰🇷 한국어</option>
+                    <option value="en">🇺🇸 English</option>
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    문제가 선택한 언어로 생성됩니다
+                  </p>
+                </div>
+
                 {/* 생성 개수 */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -520,9 +544,17 @@ export default function CreateProblemPage() {
 
                 {/* 안내 메시지 */}
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <p className="text-sm text-purple-800">
-                    💡 생성된 문제는 자동으로 "검토 대기" 상태가 되며, 관리자 검토 후
-                    활성화됩니다.
+                  <p className="text-sm text-purple-800 mb-2">
+                    💡 <strong>문제 유형 설명:</strong>
+                  </p>
+                  <ul className="text-sm text-purple-800 space-y-1 ml-4 list-disc">
+                    <li><strong>AI 정보 검증:</strong> AI가 제공한 정보의 오류 찾기 (주관식)</li>
+                    <li><strong>문제 분해:</strong> 복잡한 문제를 단계별로 해결하기 (주관식)</li>
+                    <li><strong>객관식:</strong> 4개의 선택지 중 정답 고르기</li>
+                    <li><strong>OX 퀴즈:</strong> 진술의 참/거짓 판단하기</li>
+                  </ul>
+                  <p className="text-sm text-purple-800 mt-3">
+                    📝 생성된 문제는 자동으로 "검토 대기" 상태가 되며, 관리자 검토 후 활성화됩니다.
                   </p>
                 </div>
 
