@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth-helpers';
+import { gradeAnswerWithAI } from '@/lib/ai-grading';
 
 const submitSchema = z.object({
   problemId: z.string(),
@@ -61,16 +62,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // 간단한 정답 체크 (실제로는 더 정교한 로직 필요)
-    const userAnswer = validatedData.answer.toLowerCase().trim();
-    const correctAnswer = problem.correctAnswer.toLowerCase().trim();
-
-    // 키워드 기반 체크 (간단한 버전)
-    const isCorrect = correctAnswer.split(' ').some(keyword =>
-      userAnswer.includes(keyword.trim())
+    // AI 기반 채점
+    const gradingResult = await gradeAnswerWithAI(
+      problem.content,
+      problem.correctAnswer,
+      validatedData.answer,
+      problem.answerFormat
     );
 
-    // 답안 제출 기록
+    const isCorrect = gradingResult.isCorrect;
+
+    // 답안 제출 기록 (AI 피드백 포함)
     const attempt = await prisma.attempt.create({
       data: {
         userId,
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
         isCorrect,
         hintUsed: validatedData.hintUsed,
         timeSpent: validatedData.timeSpent,
+        feedback: gradingResult.feedback, // AI 피드백 저장
       },
     });
 
@@ -144,7 +147,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       isCorrect,
-      message: isCorrect ? '정답입니다!' : '다시 한 번 생각해보세요!',
+      score: gradingResult.score,
+      message: gradingResult.feedback,
+      feedback: gradingResult.feedback,
+      reasoning: gradingResult.reasoning,
       attemptId: attempt.id,
     });
 

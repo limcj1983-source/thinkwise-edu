@@ -42,6 +42,8 @@ export default function ProblemSolvePage() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [score, setScore] = useState(0);
 
   useEffect(() => {
     fetchProblem();
@@ -107,6 +109,8 @@ export default function ProblemSolvePage() {
 
       if (response.ok) {
         setIsCorrect(data.isCorrect);
+        setFeedback(data.feedback || data.message);
+        setScore(data.score || (data.isCorrect ? 100 : 0));
         setSubmitted(true);
       } else {
         if (data.limitReached) {
@@ -486,12 +490,31 @@ export default function ProblemSolvePage() {
               <h2 className="text-2xl font-bold mb-2">
                 {isCorrect ? "정답입니다!" : "아쉬워요!"}
               </h2>
-              <p className="text-gray-600">
-                {isCorrect
-                  ? "훌륭한 분석이에요! 계속 이런 실력을 키워나가세요."
-                  : "괜찮아요! 다시 한 번 생각해볼까요?"}
-              </p>
+
+              {/* 점수 표시 (주관식일 때만) */}
+              {problem.answerFormat === "SHORT_ANSWER" && score > 0 && (
+                <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full font-bold text-lg mb-3">
+                  {score}점 / 100점
+                </div>
+              )}
             </div>
+
+            {/* AI 피드백 (주관식일 때) */}
+            {problem.answerFormat === "SHORT_ANSWER" && feedback && (
+              <div className={`border-l-4 p-4 rounded mb-6 ${
+                isCorrect
+                  ? "bg-green-50 border-green-500"
+                  : score >= 60
+                  ? "bg-blue-50 border-blue-500"
+                  : "bg-orange-50 border-orange-500"
+              }`}>
+                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <span>🤖</span>
+                  <span>AI 선생님의 피드백</span>
+                </h3>
+                <p className="text-gray-800">{feedback}</p>
+              </div>
+            )}
 
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-6">
               <h3 className="font-bold text-gray-900 mb-2">✅ 정답 및 해설</h3>
