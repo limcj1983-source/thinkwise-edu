@@ -258,11 +258,11 @@ export default function ProblemSolvePage() {
                             <span className="text-green-600 text-sm">✓ 완료</span>
                           )}
                         </div>
-                        <p className="text-gray-700 font-medium">
-                          이 단계에서 무엇을 해야 할까요?
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          문제를 해결하기 위한 {step.stepNumber}번째 단계를 생각해보세요
+                        <h3 className="font-bold text-gray-900 mb-1">
+                          {step.title}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          이 단계에 맞는 답변을 작성해주세요
                         </p>
                       </div>
                     </div>
