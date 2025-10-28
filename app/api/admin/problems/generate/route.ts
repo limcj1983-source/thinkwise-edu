@@ -81,37 +81,71 @@ function createProblemDecompositionPrompt(params: {
   grade: number;
   difficulty: Difficulty;
   subject: string;
+  category?: string; // 주제 카테고리
 }): string {
-  const styleExamples = [
-    {
-      name: "스토리 중심",
-      example: `"민지는 다음 주 토요일에 친구 10명을 초대해서 생일 파티를 열기로 했어요. 엄마는 '네가 직접 계획을 세워보렴'이라고 하셨어요. 민지는 어떻게 해야 성공적인 파티를 열 수 있을까요?"`
-    },
-    {
-      name: "프로젝트형",
-      example: `"4학년 환경 동아리에서 '교실 재활용 캠페인'을 진행하기로 했습니다. 한 달 동안 우리 반 재활용률을 2배로 높이는 것이 목표입니다. 어떻게 계획을 세워야 할까요?"`
-    },
-    {
-      name: "실생활 문제 해결",
-      example: `"수호는 매일 아침 학교 가기 전에 시간이 부족해서 엄마에게 혼나요. 일어나서 학교 가기까지 해야 할 일이 많은데, 자꾸 지각을 하게 됩니다. 수호가 시간을 지키려면 어떻게 해야 할까요?"`
-    },
-    {
-      name: "대화/토론형",
-      example: `"우리 반 친구들이 체육 시간에 할 운동을 투표로 정하기로 했어요. 하지만 의견이 너무 다양해서 결정하기 어렵습니다. 공정하고 모두가 만족할 수 있는 방법으로 결정하려면 어떻게 해야 할까요?"`
-    },
-    {
-      name: "수학 문제 해결",
-      example: `"지훈이네 반에서 학급 문고를 운영하고 있어요. 한 학기 동안 30,000원의 예산으로 새 책을 사려고 합니다. 동화책은 권당 3,500원, 과학책은 권당 5,000원, 역사책은 권당 4,500원이에요. 학생들이 선호하는 분야별 비율을 고려해서 예산 안에서 최대한 다양하게 책을 구매하려면 어떻게 계획해야 할까요?"`
-    },
-    {
-      name: "과학 실험 설계",
-      example: `"5학년 과학 시간에 '식물의 성장 조건'을 주제로 실험을 진행하기로 했습니다. 물, 햇빛, 흙의 종류 중에서 어떤 조건이 식물 성장에 가장 큰 영향을 미치는지 알아보려고 해요. 2주 동안 실험을 진행할 계획인데, 어떻게 실험을 설계하고 진행해야 할까요?"`
-    },
-    {
-      name: "논리적 추론",
-      example: `"학교 급식실에서 매일 점심시간에 음식물 쓰레기가 많이 나온다는 문제가 있어요. 급식 담당 선생님께서 우리 반에게 음식물 쓰레기를 줄일 방법을 제안해달라고 하셨습니다. 원인을 파악하고 실천 가능한 해결책을 찾으려면 어떻게 접근해야 할까요?"`
-    }
-  ];
+  // 카테고리별 예시 정의
+  const categoryExamples: Record<string, Array<{name: string; example: string}>> = {
+    DAILY_LIFE: [
+      {
+        name: "생일 파티 계획",
+        example: `"민지는 다음 주 토요일에 친구 10명을 초대해서 생일 파티를 열기로 했어요. 엄마는 '네가 직접 계획을 세워보렴'이라고 하셨어요. 민지는 어떻게 해야 성공적인 파티를 열 수 있을까요?"`
+      },
+      {
+        name: "시간 관리",
+        example: `"수호는 매일 아침 학교 가기 전에 시간이 부족해서 엄마에게 혼나요. 일어나서 학교 가기까지 해야 할 일이 많은데, 자꾸 지각을 하게 됩니다. 수호가 시간을 지키려면 어떻게 해야 할까요?"`
+      },
+      {
+        name: "프로젝트 계획",
+        example: `"4학년 환경 동아리에서 '교실 재활용 캠페인'을 진행하기로 했습니다. 한 달 동안 우리 반 재활용률을 2배로 높이는 것이 목표입니다. 어떻게 계획을 세워야 할까요?"`
+      }
+    ],
+    TEXT_SUMMARY: [
+      {
+        name: "이야기 요약",
+        example: `"선생님께서 '흥부와 놀부' 이야기를 읽고 핵심 내용을 정리해서 발표하라고 하셨어요. 긴 이야기를 3분 안에 발표할 수 있도록 요약하려면 어떻게 해야 할까요?"`
+      },
+      {
+        name: "뉴스 기사 정리",
+        example: `"사회 시간에 환경 보호에 관한 신문 기사를 읽고 반 친구들에게 설명해야 해요. 어려운 용어도 많고 내용도 길어서 어떻게 정리해야 할지 막막합니다. 어떤 순서로 정리하면 좋을까요?"`
+      },
+      {
+        name: "책 내용 정리",
+        example: `"독서 감상문을 쓰기 위해 읽은 책의 내용을 먼저 정리하고 싶어요. 300페이지가 넘는 책인데, 중요한 부분을 찾아서 체계적으로 정리하려면 어떻게 해야 할까요?"`
+      }
+    ],
+    MATH: [
+      {
+        name: "예산 계획",
+        example: `"지훈이네 반에서 학급 문고를 운영하고 있어요. 한 학기 동안 30,000원의 예산으로 새 책을 사려고 합니다. 동화책은 권당 3,500원, 과학책은 권당 5,000원, 역사책은 권당 4,500원이에요. 학생들이 선호하는 분야별 비율을 고려해서 예산 안에서 최대한 다양하게 책을 구매하려면 어떻게 계획해야 할까요?"`
+      },
+      {
+        name: "최적화 문제",
+        example: `"학교 운동회에서 우리 반이 400미터 계주를 하게 되었어요. 6명의 선수가 각각 다른 속도로 달릴 수 있는데, 전체 기록을 가장 빠르게 하려면 어떤 순서로 배치해야 할까요? 각 구간의 특성도 고려해야 합니다."`
+      },
+      {
+        name: "비율과 분배",
+        example: `"미술 시간에 3명이 한 팀을 이루어 벽화를 그리기로 했어요. 6미터 길이의 벽을 각자의 실력과 시간에 맞춰 공정하게 나누고, 물감도 적절히 분배하려면 어떻게 계획해야 할까요?"`
+      }
+    ],
+    SCIENCE: [
+      {
+        name: "식물 실험",
+        example: `"5학년 과학 시간에 '식물의 성장 조건'을 주제로 실험을 진행하기로 했습니다. 물, 햇빛, 흙의 종류 중에서 어떤 조건이 식물 성장에 가장 큰 영향을 미치는지 알아보려고 해요. 2주 동안 실험을 진행할 계획인데, 어떻게 실험을 설계하고 진행해야 할까요?"`
+      },
+      {
+        name: "물의 성질 탐구",
+        example: `"물의 온도에 따라 설탕이 녹는 속도가 어떻게 달라지는지 알아보는 실험을 하려고 해요. 공정한 실험 결과를 얻으려면 어떤 점들을 고려해서 실험을 설계해야 할까요?"`
+      },
+      {
+        name: "자연 현상 관찰",
+        example: `"우리 동네 공원의 새들이 계절에 따라 어떻게 변하는지 관찰 일기를 쓰기로 했어요. 4계절 동안 체계적으로 관찰하고 기록하려면 어떤 계획을 세워야 할까요?"`
+      }
+    ]
+  };
+
+  // 카테고리에 맞는 예시 선택 (없으면 일상생활 예시 사용)
+  const examples = categoryExamples[params.category || 'DAILY_LIFE'] || categoryExamples.DAILY_LIFE;
+  const randomStyle = examples[Math.floor(Math.random() * examples.length)];
 
   const gradeGuidelines: Record<number, string> = {
     1: "한 번에 한 가지씩, 매우 간단한 2-3단계",
@@ -316,6 +350,7 @@ async function generateProblemWithAI(params: {
   grade: number;
   subject?: string;
   language?: string;
+  decompositionCategory?: string;
 }): Promise<any> {
   const language = params.language || 'ko';
 
@@ -340,7 +375,12 @@ async function generateProblemWithAI(params: {
   if (params.type === 'AI_VERIFICATION') {
     basePrompt = createAIVerificationPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
   } else {
-    basePrompt = createProblemDecompositionPrompt({ grade: params.grade, difficulty: params.difficulty, subject });
+    basePrompt = createProblemDecompositionPrompt({
+      grade: params.grade,
+      difficulty: params.difficulty,
+      subject,
+      category: params.decompositionCategory
+    });
   }
 
   // 답변 형식에 따라 프롬프트 수정
@@ -415,7 +455,7 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    const { type, answerFormat, difficulty, grade, subject, count, language } = body;
+    const { type, answerFormat, difficulty, grade, subject, count, language, decompositionCategory } = body;
 
     if (!type || !answerFormat || !difficulty || !grade || !count) {
       return NextResponse.json(
@@ -456,6 +496,7 @@ export async function POST(request: Request) {
           grade,
           subject,
           language: language || 'ko',
+          decompositionCategory,
         });
 
         // 데이터베이스에 저장

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 type ProblemType = "AI_VERIFICATION" | "PROBLEM_DECOMPOSITION";
 type AnswerFormat = "SHORT_ANSWER" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
+type DecompositionCategory = "DAILY_LIFE" | "TEXT_SUMMARY" | "MATH" | "SCIENCE";
 
 interface ProblemStep {
   stepNumber: number;
@@ -42,6 +43,7 @@ export default function CreateProblemPage() {
     answerFormat: "SHORT_ANSWER" as AnswerFormat,
     difficulty: "MEDIUM" as Difficulty,
     subject: "",
+    decompositionCategory: "DAILY_LIFE" as DecompositionCategory,
     grade: 3,
     count: 1,
     language: "ko",
@@ -558,6 +560,31 @@ export default function CreateProblemPage() {
                     학생이 답변하는 방식을 선택하세요
                   </p>
                 </div>
+
+                {/* 문제 분해 주제 선택 */}
+                {aiFormData.type === "PROBLEM_DECOMPOSITION" && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      문제 분해 주제 *
+                    </label>
+                    <select
+                      value={aiFormData.decompositionCategory}
+                      onChange={(e) =>
+                        setAiFormData({ ...aiFormData, decompositionCategory: e.target.value as DecompositionCategory })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      required
+                    >
+                      <option value="DAILY_LIFE">🏠 일상생활 (파티 계획, 시간 관리 등)</option>
+                      <option value="TEXT_SUMMARY">📖 글의 요약 (이야기 정리, 핵심 파악 등)</option>
+                      <option value="MATH">📊 수학 문제 (계산, 최적화, 비율 등)</option>
+                      <option value="SCIENCE">🔬 과학 실험 설계 (가설, 변인 통제 등)</option>
+                    </select>
+                    <p className="text-sm text-gray-500 mt-1">
+                      어떤 주제의 문제 분해 문제를 생성할지 선택하세요
+                    </p>
+                  </div>
+                )}
 
                 {/* 난이도 & 학년 */}
                 <div className="grid md:grid-cols-2 gap-4">
