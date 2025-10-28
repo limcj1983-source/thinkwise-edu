@@ -143,7 +143,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* 주요 메뉴 */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* 문제 검토 */}
           <Link href="/admin/review">
             <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition cursor-pointer border-2 border-transparent hover:border-orange-500">
@@ -178,6 +178,25 @@ export default function AdminDashboard() {
               </p>
               <div className="flex items-center gap-2 text-sm text-blue-600 font-semibold">
                 문제 관리하기
+                <span>→</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* 가입자 관리 */}
+          <Link href="/admin/users">
+            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition cursor-pointer border-2 border-transparent hover:border-green-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center text-white text-3xl mb-4">
+                👥
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                가입자 관리
+              </h2>
+              <p className="text-gray-600 mb-4">
+                사용자 정보와 활동 내역을 확인하세요
+              </p>
+              <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
+                가입자 보기
                 <span>→</span>
               </div>
             </div>
